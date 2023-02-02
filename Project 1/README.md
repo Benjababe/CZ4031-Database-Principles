@@ -20,6 +20,7 @@ PS C:\Users\Benjababe\Desktop\CZ4031-Database-Principles\Project 1>
 
 Guide uses VSCode as the IDE, other IDEs will work but different setup methods may be required.
 
+### With g++ & gdb
 1. Ensure `g++` and `gdb` are accessible in any directory, `tasks.json` and `launch.json` assume they are.
 2. Enter the `Run and Debug` tab on the left and run the `(Windows) Build & Launch` configuration.
 3. Place a breakpoint somewhere in `main.cpp` and it should stop there.
@@ -30,10 +31,10 @@ Guide uses VSCode as the IDE, other IDEs will work but different setup methods m
 2. Select a kit from the bottom left of the VSCode window.
 3. Configure CMake with `Ctrl+Shift+P` and type `CMake: Configure` and select that option. The `out/build` folder should be created.
 4. Build and launch using the `(Windows) CMake Build & Launch` configuration.
-5. Place a breakpoint somewhere in main.cpp and it should stop there.
+5. Place a breakpoint somewhere in `main.cpp` and it should stop there.
 
 ## Running as the Examiner
 
-1. Run either `compile.bat` or `compile.sh` depending on your operating system, `cz4031_project_1` executable should be created in the project root directory.
+1. Run either `compile.bat` or `compile.sh` depending on your operating system, the `cz4031_project_1` executable should be created in the project root directory.
 2. Run the executable and the initialisation and experiments should run.
 
