@@ -7,21 +7,18 @@
 #include "disk.h"
 #include "structs.h"
 #include "block.h"
+#include "experiments.h"
 
 void read_data_file(Disk &, std::vector<RecordPtr> &);
 
 int main()
 {
     Disk disk;
-    std::vector<RecordPtr> record_ptrs;
+    std::vector<RecordPtr> record_ptrs; // to be used for indexing
     read_data_file(disk, record_ptrs);
 
-    RecordPtr last = record_ptrs[record_ptrs.size() - 1];
-
-    Block lastBlock = disk.read_block(last.block_id);
-    Record lastRecord = lastBlock.read_record(last.block_offset);
-
-    std::cin.ignore();
+    experiment_1(record_ptrs);
+    return 0;
 }
 
 /**
@@ -35,7 +32,7 @@ void read_data_file(Disk &disk, std::vector<RecordPtr> &record_ptrs)
     // read data.tsv or sample.tsv
     // sample contains only the first 50k lines so it doesn't
     // take forever to read & insert when testing features
-    std::ifstream data_file("./data/sample.tsv");
+    std::ifstream data_file("./data/data.tsv");
     std::string line;
 
     // first getline() is to skip the header
