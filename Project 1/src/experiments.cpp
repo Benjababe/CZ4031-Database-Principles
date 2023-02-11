@@ -1,5 +1,10 @@
 #include "experiments.h"
 
+std::ostream &operator<<(std::ostream &os, const Record &record)
+{
+    return os << "tconst: " << record.tconst << "\trating: " << record.average_rating << "\tnum votes: " << record.num_votes;
+}
+
 void experiment_1(std::vector<RecordPtr> &record_ptrs)
 {
     RecordPtr last = record_ptrs[record_ptrs.size() - 1];
@@ -13,16 +18,91 @@ void experiment_1(std::vector<RecordPtr> &record_ptrs)
 
 void experiment_2(BPTree &bpTree)
 {
-    std::cout << "parameter n of b+ tree : " << bpTree.maxKeys <<std::endl;
-    std::cout << "number of nodes of b+ tree : " << bpTree.numNodes <<std::endl;
-    std::cout << "number of levels of b+ tree : " << bpTree.height <<std::endl;
-    Node* rootNode = bpTree.disk->getBlockPtr(bpTree.getRoot().block_id)->getNode();
+    std::cout << "parameter n of b+ tree : " << bpTree.maxKeys << std::endl;
+    std::cout << "number of nodes of b+ tree : " << bpTree.numNodes << std::endl;
+    std::cout << "number of levels of b+ tree : " << bpTree.height << std::endl;
+    Node *rootNode = bpTree.disk->getBlockPtr(bpTree.getRoot().block_id)->getNode();
     std::cout << "Keys of root node : ";
-    for (int i=0; i< rootNode->numKeys; i++)
+    for (int i = 0; i < rootNode->numKeys; i++)
     {
         std::cout << rootNode->nodeKeyArr[i];
-        if (i+1 != rootNode->numKeys)
-            std::cout<<", ";
+        if (i + 1 != rootNode->numKeys)
+            std::cout << ", ";
     }
     std::cout << std::endl;
+}
+
+void experiment_3(Disk &disk, BPTree &bpTree)
+{
+    std::map<size_t, Block> data_block_cache; // keep track number of blocks read to "memory"
+    size_t node_access_count = 0;             // no. of node blocks read
+    float rating_sum = 0;
+
+    RecordPtr rootPtr = bpTree.getRoot();
+    Block rootBlock = disk.read_block(rootPtr.block_id);
+    Node *node = rootBlock.getNode();
+
+    // access root node
+    ++node_access_count;
+
+    int search_val = 500;
+    std::vector<RecordPtr> result_ptrs;
+
+    time_t start_time = get_current_time();
+
+    while (!node->isLeaf)
+    {
+        size_t i;
+        for (i = 1; i <= node->numKeys; i++)
+        {
+            if (node->nodeKeyArr[i - 1] >= search_val)
+                break;
+        }
+
+        RecordPtr ptr = node->nodeRecordPtrArr[i - 1][0];
+        Block tmp_blk = disk.read_block(ptr.block_id);
+        node = tmp_blk.getNode();
+        ++node_access_count;
+    }
+
+    // find the pointer to the records
+    for (size_t i = 0; i < node->numKeys; i++)
+    {
+        if (node->nodeKeyArr[i] == search_val)
+        {
+            result_ptrs = node->nodeRecordPtrArr[i];
+            break;
+        }
+    }
+
+    for (RecordPtr ptr : result_ptrs)
+    {
+        Block result_blk;
+        int blk_id = ptr.block_id;
+
+        if (data_block_cache.count(blk_id))
+        {
+            result_blk = data_block_cache[blk_id];
+        }
+        else
+        {
+            result_blk = disk.read_block(blk_id);
+            data_block_cache[blk_id] = result_blk;
+        }
+
+        Record result_rec = result_blk.read_record(ptr.block_offset);
+
+        // set to true to printout records found
+        if (true)
+            std::cout << result_rec << std::endl;
+
+        rating_sum += result_rec.average_rating;
+    }
+
+    uint64_t time_taken_index = get_time_taken(start_time);
+
+    std::cout << "\nNumber of index nodes accessed: " << node_access_count << std::endl;
+    std::cout << "Number of data blocks accessed: " << data_block_cache.size() << std::endl;
+    std::cout << "Average rating: " << rating_sum / result_ptrs.size() << std::endl;
+    std::cout << "Time taken searching using B+ tree: " << time_taken_index << "ms" << std::endl;
 }

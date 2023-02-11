@@ -1,31 +1,30 @@
+#include <algorithm>
 #include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <sstream>
-
-#include <algorithm>
 #include <vector>
 
-#include "disk.h"
-#include "structs.h"
 #include "block.h"
-#include "experiments.h"
 #include "bpTree.h"
+#include "disk.h"
+#include "experiments.h"
+#include "structs.h"
 
-void read_data_file(Disk &, std::vector<RecordPtr> &);
-void createBPTree(Disk &, BPTree &, std::vector<RecordPtr> &);
+void read_data_file(Disk &, std::vector<RecordPtr> &, BPTree &);
 
 int main()
 {
     Disk disk;
     std::vector<RecordPtr> record_ptrs; // to be used for indexing
-    read_data_file(disk, record_ptrs);
+    BPTree bpTree(record_ptrs, disk);
+    read_data_file(disk, record_ptrs, bpTree);
 
     experiment_1(record_ptrs);
-    BPTree bpTree(record_ptrs, disk);
-    createBPTree(disk, bpTree, record_ptrs);
     experiment_2(bpTree);
+    experiment_3(disk, bpTree);
+
     return 0;
 }
 
@@ -35,12 +34,12 @@ int main()
  * @param disk Object used to simulate storage
  * @param record_ptrs List of record pointers, used in B+ tree
  */
-void read_data_file(Disk &disk, std::vector<RecordPtr> &record_ptrs)
+void read_data_file(Disk &disk, std::vector<RecordPtr> &record_ptrs, BPTree &bp_tree)
 {
     // read data.tsv or sample.tsv
     // sample contains only the first 50k lines so it doesn't
     // take forever to read & insert when testing features
-    std::ifstream data_file("./data/sample.tsv");
+    std::ifstream data_file("./data/data.tsv");
     std::string line;
 
     // first getline() is to skip the header
@@ -58,22 +57,9 @@ void read_data_file(Disk &disk, std::vector<RecordPtr> &record_ptrs)
         // adds record into disk and retrieves its starting address
         RecordPtr record_ptr = disk.add_record(&record);
         record_ptrs.push_back(record_ptr);
-    }
-}
 
-/**
- * @brief create B+ Tree
- *
- * @param disk Disk 
- * @param bpTree BPTree 
- * @param record_ptrs Array of RecordPtr
- */
-void createBPTree(Disk &disk, BPTree &bpTree, std::vector<RecordPtr> &record_ptrs)
-{
-    for (int i=0; i<record_ptrs.size(); i++)
-    {
-        RecordPtr recordPointer = record_ptrs[i];
-        Record record = disk.getBlockPtr(recordPointer.block_id)->read_record(recordPointer.block_offset);
-        bpTree.insert(record.num_votes, recordPointer);
+        bp_tree.insert(record.num_votes, record_ptr);
+
+        // bp_tree.print_tree();
     }
 }

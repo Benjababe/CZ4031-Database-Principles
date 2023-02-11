@@ -13,34 +13,34 @@ class Block;
 class Node
 {
 public:
-    int numKeys;                                            // Current number of keys in node
-    bool isLeaf;                                            // If node is a leaf node
-    std::vector<std::vector<RecordPtr>> nodeRecordPtrArr;   // Array of RecordPtr 
-    std::vector<int> nodeKeyArr;                            // Array of key values
+    int numKeys;                                          // Current number of keys in node
+    bool isLeaf;                                          // If node is a leaf node
+    std::vector<std::vector<RecordPtr>> nodeRecordPtrArr; // Array of RecordPtr
+    std::vector<int> nodeKeyArr;                          // Array of key values
     Node(int maxKeys, bool isLeaf);
-    
+
 private:
 };
 
 class BPTree
 {
 public:
-    int maxKeys;    // Maximum number of keys
-    int numNodes;   // Number of nodes in this B+ Tree.
-    int height;     // Levels in this B+ Tree.
-    Disk* disk;
+    int maxKeys;  // Maximum number of keys
+    int numNodes; // Number of nodes in this B+ Tree.
+    int height;   // Levels in this B+ Tree.
+    Disk *disk;
     BPTree(std::vector<RecordPtr> &, Disk &);
     void insert(int numVotes, RecordPtr recordPointer);
-    void updateParentNode(Node* parentNode, Node* newNode, int lastNodeIndex, int minKeys, RecordPtr newPointer, RecordPtr parentPointer, std::vector<RecordPtr>& parentRecordPtr);
-    RecordPtr splitParentNode(Node* parentNode, int lastNodeIndex, int minKeys, RecordPtr newPointer);
-    void sortLeafNode(Node* curNode, int end);
-    int getIndexToInsert(int numVotes, Node* curNode);
+    void updateParentNode(Node *parentNode, Node *newNode, int lastNodeIndex, int minKeys, RecordPtr newPointer, RecordPtr parentPointer, std::vector<RecordPtr> &parentRecordPtr);
+    RecordPtr splitParentNode(Node *parentNode, int lastNodeIndex, int minKeys, RecordPtr newPointer);
+    void sortLeafNode(Node *curNode, int end);
+    int getIndexToInsert(int numVotes, Node *curNode);
     int getSmallestKeyInSubtree(RecordPtr parent);
     RecordPtr getRoot();
     int getNumLeafNodes();
-    
+
 private:
-    RecordPtr root;                     // pointer to block that contains root node 
+    RecordPtr root; // pointer to block that contains root node
 };
 
 #endif

@@ -1,6 +1,8 @@
 #ifndef H_STRUCTS
 #define H_STRUCTS
 
+#include <ostream>
+
 // size of record will be 20 bytes, allowing 10 records per block perfectly
 struct Record
 {
