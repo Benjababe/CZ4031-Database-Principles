@@ -83,12 +83,53 @@ RecordPtr Disk::add_record(Record *record)
 }
 
 /**
+ * @brief Store node in disk 
+ *
+ * @param node pointer
+ * @return RecordPtr of block
+ */
+RecordPtr Disk::addNode(Node* node)
+{
+    RecordPtr record_ptr;
+    this->block_idx++;
+    Block *block = &this->blocks[this->block_idx];
+    block->writeNode(node);
+
+    record_ptr.block_id = this->block_idx;
+    record_ptr.block_offset = 0;
+
+    return record_ptr;
+}
+
+/**
  * @brief Returns block object of specified index
  *
  * @param block_id
  * @return Block
  */
-Block Disk::read_block(size_t block_id)
+Block Disk::read_block(int block_id)
 {
     return this->blocks[block_id];
+}
+
+/**
+ * @brief get pointer to block object
+ *
+ * @param block_id
+ * @return Block pointer
+ */
+Block* Disk::getBlockPtr(int block_id)
+{
+    return &this->blocks[block_id];
+}
+
+/**
+ * @brief get pointer to node object
+ *
+ * @param block pointer
+ * @return Node pointer
+ */
+Node* Disk::getNodePtr(Block* block)
+{
+   return block->getNode();
 }

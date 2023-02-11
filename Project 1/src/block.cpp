@@ -6,6 +6,7 @@ Block::Block()
 {
     this->data = std::vector<char>(BLOCK_SIZE, '\0');
     this->record_count = 0;
+    this->node = nullptr;
 }
 
 /**
@@ -14,10 +15,20 @@ Block::Block()
  * @param block_offset Address offset to insert record
  * @param record Record to insert
  */
-void Block::write_record(size_t block_offset, Record *record)
+void Block::write_record(int block_offset, Record *record)
 {
     std::memcpy(&this->data[block_offset], record, sizeof(Record));
     this->inc_record_count();
+}
+
+/**
+ * @brief Write node pointer to block
+ *
+ * @param Node pointer
+ */
+void Block::writeNode(Node* node)
+{
+   this->node = node;
 }
 
 /**
@@ -26,11 +37,21 @@ void Block::write_record(size_t block_offset, Record *record)
  * @param block_offset Address offset to read from
  * @return Record
  */
-Record Block::read_record(size_t block_offset)
+Record Block::read_record(int block_offset)
 {
     Record record;
     std::memcpy(&record, &this->data[block_offset], sizeof(Record));
     return record;
+}
+
+/**
+ * @brief Get node pointer
+ *
+ * @return Node pointer 
+ */
+Node* Block::getNode()
+{
+    return this->node;
 }
 
 void Block::inc_record_count()

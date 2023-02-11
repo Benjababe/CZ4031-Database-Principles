@@ -8,13 +8,18 @@
 #include "structs.h"
 #include "block.h"
 
+class Block;
+class Node;
 class Disk
 {
 public:
     Disk();
     bool get_empty_address();
     RecordPtr add_record(Record *);
-    Block read_block(size_t block_id);
+    RecordPtr addNode(Node* node);
+    Block read_block(int block_id);
+    Block* getBlockPtr(int block_id);
+    Node* getNodePtr(Block* block);
 
 private:
     size_t block_idx;    // points to the active block

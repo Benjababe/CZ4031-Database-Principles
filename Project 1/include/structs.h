@@ -13,8 +13,8 @@ struct Record
 // and where the record starts in the block
 struct RecordPtr
 {
-    size_t block_id;
-    size_t block_offset;
+    int block_id = 0;
+    int block_offset = 0;
 };
 
 #endif
