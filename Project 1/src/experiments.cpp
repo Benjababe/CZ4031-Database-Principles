@@ -92,16 +92,17 @@ void experiment_3(Disk &disk, BPTree &bpTree)
 
         Record result_rec = result_blk.read_record(ptr.block_offset);
 
-        // set to true to printout records found
-        if (true)
-            std::cout << result_rec << std::endl;
+        // print all records found
+        // if (true)
+        //     std::cout << result_rec << std::endl;
 
         rating_sum += result_rec.average_rating;
     }
 
     uint64_t time_taken_index = get_time_taken(start_time);
 
-    std::cout << "\nNumber of index nodes accessed: " << node_access_count << std::endl;
+    std::cout << "\nNumber of records with numVotes=500: " << result_ptrs.size() << std::endl;
+    std::cout << "Number of index nodes accessed: " << node_access_count << std::endl;
     std::cout << "Number of data blocks accessed: " << data_block_cache.size() << std::endl;
     std::cout << "Average rating: " << rating_sum / result_ptrs.size() << std::endl;
     std::cout << "Time taken searching using B+ tree: " << time_taken_index << "ms" << std::endl;

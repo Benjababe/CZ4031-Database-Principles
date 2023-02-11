@@ -59,7 +59,5 @@ void read_data_file(Disk &disk, std::vector<RecordPtr> &record_ptrs, BPTree &bp_
         record_ptrs.push_back(record_ptr);
 
         bp_tree.insert(record.num_votes, record_ptr);
-
-        // bp_tree.print_tree();
     }
 }
