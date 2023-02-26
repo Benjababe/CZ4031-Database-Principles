@@ -132,7 +132,7 @@ void experiment_4(Disk &disk, BPTree &bpTree)
         size_t i;
         for (i = 1; i <= node->numKeys; i++)
         {
-            if (start_search_val <= node->nodeKeyArr[i - 1] && node->nodeKeyArr[i] <= end_search_val)
+            if ((start_search_val <= node->nodeKeyArr[i - 1]) && (node->nodeKeyArr[i - 1] >= end_search_val))
                 break;
         }
 
@@ -145,7 +145,7 @@ void experiment_4(Disk &disk, BPTree &bpTree)
     // find the pointer to the records
     for (size_t i = 0; i < node->numKeys; i++)
     {
-        if (start_search_val <= node->nodeKeyArr[i] && node->nodeKeyArr[i] <= end_search_val)
+        if ((start_search_val <= node->nodeKeyArr[i]) && (node->nodeKeyArr[i] <= end_search_val ))
         {
             result_ptrs = node->nodeRecordPtrArr[i];
             break;
@@ -170,8 +170,8 @@ void experiment_4(Disk &disk, BPTree &bpTree)
         Record result_rec = result_blk.read_record(ptr.block_offset);
 
         // print all records found
-        // if (true)
-        //     std::cout << result_rec << std::endl;
+        if (true)
+            std::cout << result_rec << std::endl;
 
         rating_sum += result_rec.average_rating;
     }
