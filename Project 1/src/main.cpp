@@ -1,3 +1,5 @@
+using namespace std;
+
 #include <algorithm>
 #include <cstdint>
 #include <fstream>
@@ -24,6 +26,7 @@ int main()
     experiment_1(record_ptrs);
     experiment_2(bpTree);
     experiment_3(disk, bpTree);
+    experiment_4(disk, bpTree);
 
     return 0;
 }

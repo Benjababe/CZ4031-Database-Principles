@@ -107,3 +107,81 @@ void experiment_3(Disk &disk, BPTree &bpTree)
     std::cout << "Average rating: " << rating_sum / result_ptrs.size() << std::endl;
     std::cout << "Time taken searching using B+ tree: " << time_taken_index << "ms" << std::endl;
 }
+
+void experiment_4(Disk &disk, BPTree &bpTree)
+{
+    std::map<size_t, Block> data_block_cache; // keep track number of blocks read to "memory"
+    size_t node_access_count = 0;             // no. of node blocks read
+    float rating_sum = 0;
+
+    RecordPtr rootPtr = bpTree.getRoot();
+    Block rootBlock = disk.read_block(rootPtr.block_id);
+    Node *node = rootBlock.getNode();
+
+    // access root node
+    ++node_access_count;
+
+    int start_search_val = 30000;
+    int end_search_val = 40000;
+    std::vector<RecordPtr> result_ptrs;
+
+    time_t start_time = get_current_time();
+
+    while (!node->isLeaf)
+    {
+        size_t i;
+        for (i = 1; i <= node->numKeys; i++)
+        {
+            if (start_search_val <= node->nodeKeyArr[i - 1] && node->nodeKeyArr[i] <= end_search_val)
+                break;
+        }
+
+        RecordPtr ptr = node->nodeRecordPtrArr[i - 1][0];
+        Block tmp_blk = disk.read_block(ptr.block_id);
+        node = tmp_blk.getNode();
+        ++node_access_count;
+    }
+
+    // find the pointer to the records
+    for (size_t i = 0; i < node->numKeys; i++)
+    {
+        if (start_search_val <= node->nodeKeyArr[i] && node->nodeKeyArr[i] <= end_search_val)
+        {
+            result_ptrs = node->nodeRecordPtrArr[i];
+            break;
+        }
+    }
+
+    for (RecordPtr ptr : result_ptrs)
+    {
+        Block result_blk;
+        int blk_id = ptr.block_id;
+
+        if (data_block_cache.count(blk_id))
+        {
+            result_blk = data_block_cache[blk_id];
+        }
+        else
+        {
+            result_blk = disk.read_block(blk_id);
+            data_block_cache[blk_id] = result_blk;
+        }
+
+        Record result_rec = result_blk.read_record(ptr.block_offset);
+
+        // print all records found
+        // if (true)
+        //     std::cout << result_rec << std::endl;
+
+        rating_sum += result_rec.average_rating;
+    }
+
+    uint64_t time_taken_index = get_time_taken(start_time);
+
+    std::cout << "\nNumber of records with numVotes from 30,000 to 40,000: " << result_ptrs.size() << std::endl;
+    std::cout << "Number of index nodes accessed: " << node_access_count << std::endl;
+    std::cout << "Number of data blocks accessed: " << data_block_cache.size() << std::endl;
+    std::cout << "Average rating: " << rating_sum / result_ptrs.size() << std::endl;
+    std::cout << "Time taken searching using B+ tree: " << time_taken_index << "ms" << std::endl;
+
+}
