@@ -552,9 +552,8 @@ void BPTree::delete(int numVotes)
                 curNode->nodeKeyArr[0] = leftNode->nodeKeyArr[leftNode->numKeys - 1];
                 curNode->nodeRecordPtrArr[0] = leftNode->nodeRecordPtrArr[leftNode->numKeys - 1]; // transfer leaf
                 leftNode->numKeys--;
-                leftNode->nodeRecordPtrArr[leftNode->numKeys - 1] = curPtr;
                 leftNode->nodeRecordPtrArr[leftNode->numKeys] = std::vector<RecordPtr>(1); // ptr to left sibling
-                leftNode->nodeKeyArr[leftNode->numKeys - 1] = 0;
+                leftNode->nodeKeyArr[leftNode->numKeys] = 0;
                 return;
             }
         }
@@ -578,14 +577,46 @@ void BPTree::delete(int numVotes)
                 curNode->nodeKeyArr[0] = rightNode->nodeKeyArr[rightNode->numKeys - 1];
                 curNode->nodeRecordPtrArr[0] = rightNode->nodeRecordPtrArr[rightNode->numKeys - 1]; // transfer leaf
                 rightNode->numKeys--;
-                rightNode->nodeRecordPtrArr[rightNode->numKeys - 1] = curPtr;
                 rightNode->nodeRecordPtrArr[rightNode->numKeys] = std::vector<RecordPtr>(1); // ptr to left sibling
-                rightNode->nodeKeyArr[rightNode->numKeys - 1] = 0;
+                rightNode->nodeKeyArr[rightNode->numKeys] = 0;
                 return;
             }
         }
 
         // Case 3: We need to merge two nodes
+        if (leftPtr.block_id != 0)
+        {
+            for (int i = leftNode->numKeys, j = 0; j < curNode->numKeys; i++, j++)
+            {
+                leftNode->nodeKeyArr[i] = curNode->nodeKeyArr[j]; // move all keys to left sibling
+                leftNode->nodeRecordPtrArr[i] = curNode->nodeRecordPtrArr[j];
+            }
+            lefNode->nodeRecordPtrArr[maxKeys + 1] = curNode->nodeRecordPtrArr[maxKeys + 1];
+            leftNode->ptr[leftNode->size] = NULL;
+            leftNode->numKeys += curNode->numKeys;
+            FixInternal(parent->keys[left], parent, cursor); // fix the remaining internal nodes
+            delete[] curNode->nodeKeyArr;
+            delete[] curNode->nodeRecordPtrArr;
+            delete curNode;
+        }
+        else if (right <= parent->size)
+        {
+            Node *rightNode = parent->ptr[right];
+            for (int i = cursor->size, j = 0; j < rightNode->size; i++, j++)
+            {
+                cursor->keys[i] = rightNode->keys[j];
+            }
+            cursor->ptr[cursor->size] = NULL;
+            cursor->size += rightNode->size;
+            cursor->ptr[cursor->size] = rightNode->ptr[rightNode->size];
+            cout << "Merging two leaf nodes\n";
+            numNodes--;
+            numTimesDeleted++;
+            removeInternal(parent->keys[right - 1], parent, rightNode);
+            delete[] rightNode->keys;
+            delete[] rightNode->ptr;
+            delete rightNode;
+        }
     }
 }
 
@@ -609,4 +640,8 @@ void BPTree::addLeftRight(int left, int right, std::vector<RecordPtr> parentReco
     {
         parentRecordPtr.push_back(curNode->nodeRecordPtrArr[right][0]);
     }
+}
+
+void FixInternal()
+{
 }
