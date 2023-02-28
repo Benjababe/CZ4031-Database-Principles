@@ -599,25 +599,7 @@ void BPTree::delete(int numVotes)
             delete[] curNode->nodeRecordPtrArr;
             delete curNode;
         }
-        else if (right <= parent->size)
-        {
-            Node *rightNode = parent->ptr[right];
-            for (int i = cursor->size, j = 0; j < rightNode->size; i++, j++)
-            {
-                cursor->keys[i] = rightNode->keys[j];
-            }
-            cursor->ptr[cursor->size] = NULL;
-            cursor->size += rightNode->size;
-            cursor->ptr[cursor->size] = rightNode->ptr[rightNode->size];
-            cout << "Merging two leaf nodes\n";
-            numNodes--;
-            numTimesDeleted++;
-            removeInternal(parent->keys[right - 1], parent, rightNode);
-            delete[] rightNode->keys;
-            delete[] rightNode->ptr;
-            delete rightNode;
         }
-    }
 }
 
 void BPTree::addLeftRight(int left, int right, std::vector<RecordPtr> parentRecordPtr)
