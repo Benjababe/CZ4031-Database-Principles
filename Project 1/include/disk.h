@@ -14,12 +14,13 @@ class Disk
 {
 public:
     Disk();
+    size_t get_block_idx();
     bool get_empty_address();
     RecordPtr add_record(Record *);
-    RecordPtr addNode(Node* node);
-    Block read_block(int block_id);
-    Block* getBlockPtr(int block_id);
-    Node* getNodePtr(Block* block);
+    RecordPtr addNode(Node *node);
+    Block read_block(size_t block_id);
+    Block *getBlockPtr(int block_id);
+    Node *getNodePtr(Block *block);
 
 private:
     size_t block_idx;    // points to the active block

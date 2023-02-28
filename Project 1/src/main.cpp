@@ -57,7 +57,11 @@ void read_data_file(Disk &disk, std::vector<RecordPtr> &record_ptrs, BPTree &bp_
         // adds record into disk and retrieves its starting address
         RecordPtr record_ptr = disk.add_record(&record);
         record_ptrs.push_back(record_ptr);
+    }
 
+    for (RecordPtr record_ptr : record_ptrs)
+    {
+        Record record = disk.getBlockPtr(record_ptr.block_id)->read_record(record_ptr.block_offset);
         bp_tree.insert(record.num_votes, record_ptr);
     }
 }

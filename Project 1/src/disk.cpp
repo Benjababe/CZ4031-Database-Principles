@@ -23,6 +23,11 @@ Disk::Disk()
     this->blocks = std::vector<Block>(this->block_count, empty_block);
 }
 
+size_t Disk::get_block_idx()
+{
+    return this->block_idx;
+}
+
 /**
  * @brief
  * Finds empty address that can fit object of given size.
@@ -83,12 +88,12 @@ RecordPtr Disk::add_record(Record *record)
 }
 
 /**
- * @brief Store node in disk 
+ * @brief Store node in disk
  *
  * @param node pointer
  * @return RecordPtr of block
  */
-RecordPtr Disk::addNode(Node* node)
+RecordPtr Disk::addNode(Node *node)
 {
     RecordPtr record_ptr;
     this->block_idx++;
@@ -107,7 +112,7 @@ RecordPtr Disk::addNode(Node* node)
  * @param block_id
  * @return Block
  */
-Block Disk::read_block(int block_id)
+Block Disk::read_block(size_t block_id)
 {
     return this->blocks[block_id];
 }
@@ -118,7 +123,7 @@ Block Disk::read_block(int block_id)
  * @param block_id
  * @return Block pointer
  */
-Block* Disk::getBlockPtr(int block_id)
+Block *Disk::getBlockPtr(int block_id)
 {
     return &this->blocks[block_id];
 }
@@ -129,7 +134,7 @@ Block* Disk::getBlockPtr(int block_id)
  * @param block pointer
  * @return Node pointer
  */
-Node* Disk::getNodePtr(Block* block)
+Node *Disk::getNodePtr(Block *block)
 {
-   return block->getNode();
+    return block->getNode();
 }

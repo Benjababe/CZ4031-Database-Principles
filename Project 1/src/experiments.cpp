@@ -48,7 +48,7 @@ void experiment_3(Disk &disk, BPTree &bpTree)
     int search_val = 500;
     std::vector<RecordPtr> result_ptrs;
 
-    time_t start_time = get_current_time();
+    time_t start_time_index = get_current_time();
 
     while (!node->isLeaf)
     {
@@ -99,11 +99,35 @@ void experiment_3(Disk &disk, BPTree &bpTree)
         rating_sum += result_rec.average_rating;
     }
 
-    uint64_t time_taken_index = get_time_taken(start_time);
+    size_t blocks_accessed_linear = 0;
+    size_t linear_result_count = 0;
+    uint64_t time_taken_index = get_time_taken(start_time_index);
+
+    time_t start_time_linear = get_current_time();
+
+    Block block;
+    for (size_t i = 0; i <= disk.get_block_idx(); ++i)
+    {
+        block = disk.read_block(i);
+        if (block.get_record_count() == 0)
+            break;
+        ++blocks_accessed_linear;
+
+        for (size_t r_i = 0; r_i < block.get_record_count(); ++r_i)
+        {
+            Record record = block.read_record(r_i * sizeof(Record));
+            if (record.num_votes == 500)
+                ++linear_result_count;
+        }
+    }
+
+    uint64_t time_taken_linear = get_time_taken(start_time_linear);
 
     std::cout << "\nNumber of records with numVotes=500: " << result_ptrs.size() << std::endl;
     std::cout << "Number of index nodes accessed: " << node_access_count << std::endl;
     std::cout << "Number of data blocks accessed: " << data_block_cache.size() << std::endl;
     std::cout << "Average rating: " << rating_sum / result_ptrs.size() << std::endl;
     std::cout << "Time taken searching using B+ tree: " << time_taken_index << "ms" << std::endl;
+    std::cout << "Number of data blocks accessed for linear scan: " << blocks_accessed_linear << std::endl;
+    std::cout << "Time taken for linear scan: " << time_taken_linear << "ms" << std::endl;
 }

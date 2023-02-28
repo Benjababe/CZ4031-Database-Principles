@@ -26,9 +26,9 @@ void Block::write_record(int block_offset, Record *record)
  *
  * @param Node pointer
  */
-void Block::writeNode(Node* node)
+void Block::writeNode(Node *node)
 {
-   this->node = node;
+    this->node = node;
 }
 
 /**
@@ -47,9 +47,9 @@ Record Block::read_record(int block_offset)
 /**
  * @brief Get node pointer
  *
- * @return Node pointer 
+ * @return Node pointer
  */
-Node* Block::getNode()
+Node *Block::getNode()
 {
     return this->node;
 }
@@ -57,4 +57,9 @@ Node* Block::getNode()
 void Block::inc_record_count()
 {
     ++this->record_count;
+}
+
+size_t Block::get_record_count()
+{
+    return this->record_count;
 }
