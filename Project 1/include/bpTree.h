@@ -38,6 +38,8 @@ public:
     int getSmallestKeyInSubtree(RecordPtr parent);
     RecordPtr getRoot();
     int getNumLeafNodes();
+    void delete(int numVotes);
+    void addLeftRight(int left, int right, std::vector<RecordPtr> parentRecordPtr);
 
 private:
     RecordPtr root; // pointer to block that contains root node

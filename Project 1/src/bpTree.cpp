@@ -429,3 +429,184 @@ int BPTree::getNumLeafNodes()
     total++;
     return total;
 }
+
+/**
+ * @brief Delete key of B+ tree
+ *
+ * @param numVotes key to delete
+ */
+void BPTree::delete(int numVotes)
+{
+    if (this->root.block_id == 0) // tree is empty
+    {
+        std::cout << "The tree is empty" << std::endl;
+        return;
+    }
+    else // tree is not empty so it must contain a root
+    {
+        RecordPtr parent = this->root;
+        RecordPtr curPtr;
+        Block *cur = this->disk->getBlockPtr(parent.block_id);
+        Node *curNode = cur->getNode();
+        Node *rootNode = curNode;
+        int left, right;
+        Node *parentNode;
+        std::vector<RecordPtr> parentRecordPtr;
+        // parentRecordPtr.push_back(parent);
+        while (!curNode->isLeaf) // travel to the leaf node
+        {
+            for (int i = 0; i < curNode->numKeys; i++)
+            {
+                parentNode = curNode;
+                left = i - 1;
+                right = i + 1;
+
+                if (numVotes < curNode->nodeKeyArr[i]) // key is less than a key value -> follow the pointer
+                {
+                    addLeftRight(left, right, parentRecordPtr);
+                    curPtr = curNode->nodeRecordPtrArr[i][0];
+                    parentRecordPtr.push_back(curPtr);
+                    cur = this->disk->getBlockPtr(curPtr.block_id);
+                    curNode = cur->getNode();
+                    break;
+                }
+                if (i == curNode->numKeys - 1) // reach the last key pointer
+                {
+                    left = i;
+                    right = i + 2;
+                    addLeftRight(left, right, parentRecordPtr);
+                    curPtr = curNode->nodeRecordPtrArr[i + 1][0];
+                    parentRecordPtr.push_back(curPtr);
+                    cur = this->disk->getBlockPtr(curPtr.block_id);
+                    curNode = cur->getNode();
+                    break;
+                }
+            }
+        }
+        // now we reached the leaf node
+        // scan for the node to be deleted
+        bool found = false;
+        int pos;
+        for (pos = 0; pos < curNode->numKeys; pos++)
+        {
+            if (curNode->nodeKeyArr[pos] == numVotes) // we found the key
+            {
+                found = true;
+                break;
+            }
+        }
+        if (!found) // we could not find the key
+        {
+            std::cout << "Key not found\n";
+            return;
+        }
+        // we could find the key
+        // update the key to the next key value
+        for (int i = pos; i < curNode->numKeys - 1; i++)
+        {
+            curNode->nodeKeyArr[i] = curNode->nodeKeyArr[i + 1];
+            curNode->nodeRecordPtrArr[i] = curNode->nodeRecordPtrArr[i + 1]
+        }
+        curNode->nodeKeyArr[i] = 0;
+        curNode->nodeRecordPtrArr[i] = curNode->nodeRecordPtrArr[i + 1]; // transfer the final pointer
+        curNode->nodeRecordPtrArr[i + 1] = std::vector<RecordPtr>(1);    // update last pointer to null pointer
+        curNode->numKeys--;                                              // decrease node size
+
+        // Case 1: number of keys on the node is still acceptable
+        if (curNode->numKeys >= (maxKeys + 1) / 2)
+        {
+            return;
+        }
+
+        // retrieve the left node and right node (if any)
+        // the order in the array: current node, right node, left node
+
+        parentRecordPtr.pop_back(); // pop the current node because now we are in the current node already
+
+        RecordPtr rightPtr = parentRecordPtr[parentRecordPtr.size() - 1];
+
+        parentRecordPtr.pop_back(); // pop the right node
+
+        RecordPtr leftPtr = parentRecordPtr[parentRecordPtr.size() - 1];
+
+        parentRecordPtr.pop_back(); // pop the left node
+
+        // Case 2: We can borrow from the left or right sibling
+
+        // leftNode has enough nodes to share
+        if (leftPtr.block_id != 0)
+        {
+            Block *left = this->disk->getBlockPtr(leftPtr.block_id);
+            Node *leftNode = left->getNode();
+            if (leftNode->numKeys >= (maxKeys + 1) / 2 + 1)
+            {
+                for (int i = curNode->numKeys; i > 0; i--)
+                {
+                    curNode->nodeKeyArr[i] = curNode->nodeKeyArr[i - 1];
+                }
+                for (int i = curNode->numKeys + 1; i > 0; i--)
+                {
+                    curNode->nodeRecordPtrArr[i] = curNode->nodeRecordPtrArr[i - 1];
+                }
+                curNode->numKeys++;
+                curNode->nodeKeyArr[0] = leftNode->nodeKeyArr[leftNode->numKeys - 1];
+                curNode->nodeRecordPtrArr[0] = leftNode->nodeRecordPtrArr[leftNode->numKeys - 1]; // transfer leaf
+                leftNode->numKeys--;
+                leftNode->nodeRecordPtrArr[leftNode->numKeys - 1] = curPtr;
+                leftNode->nodeRecordPtrArr[leftNode->numKeys] = std::vector<RecordPtr>(1); // ptr to left sibling
+                leftNode->nodeKeyArr[leftNode->numKeys - 1] = 0;
+                return;
+            }
+        }
+
+        // rightNode has enough nodes to share
+        if (rightPtr.block_id != 0)
+        {
+            Block *right = this->disk->getBlockPtr(rightPtr.block_id);
+            Node *rightNode = right->getNode();
+            if (rightNode->numKeys >= (maxKeys + 1) / 2 + 1)
+            {
+                for (int i = curNode->numKeys; i > 0; i--)
+                {
+                    curNode->nodeKeyArr[i] = curNode->nodeKeyArr[i - 1];
+                }
+                for (int i = curNode->numKeys + 1; i > 0; i--)
+                {
+                    curNode->nodeRecordPtrArr[i] = curNode->nodeRecordPtrArr[i - 1];
+                }
+                curNode->numKeys++; // ptr to next leaf
+                curNode->nodeKeyArr[0] = rightNode->nodeKeyArr[rightNode->numKeys - 1];
+                curNode->nodeRecordPtrArr[0] = rightNode->nodeRecordPtrArr[rightNode->numKeys - 1]; // transfer leaf
+                rightNode->numKeys--;
+                rightNode->nodeRecordPtrArr[rightNode->numKeys - 1] = curPtr;
+                rightNode->nodeRecordPtrArr[rightNode->numKeys] = std::vector<RecordPtr>(1); // ptr to left sibling
+                rightNode->nodeKeyArr[rightNode->numKeys - 1] = 0;
+                return;
+            }
+        }
+
+        // Case 3: We need to merge two nodes
+    }
+}
+
+void BPTree::addLeftRight(int left, int right, std::vector<RecordPtr> parentRecordPtr)
+{
+    if (left < 0)
+    {
+        RecordPtr dummy;
+        parentRecordPtr.push_back(dummy);
+    }
+    else
+    {
+        parentRecordPtr.push_back(curNode->nodeRecordPtrArr[left][0]);
+    }
+    if (right > curNode->numKeys)
+    {
+        RecordPtr dummy;
+        parentRecordPtr.push_back(dummy);
+    }
+    else
+    {
+        parentRecordPtr.push_back(curNode->nodeRecordPtrArr[right][0]);
+    }
+}
