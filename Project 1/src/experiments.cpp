@@ -37,10 +37,7 @@ void experiment_3(Disk &disk, BPTree &bpTree)
     std::map<size_t, Block> data_block_cache; // keep track number of blocks read to "memory"
     size_t node_access_count = 0;             // no. of node blocks read
     float rating_sum = 0;
-
-    RecordPtr rootPtr = bpTree.getRoot();
-    Block rootBlock = disk.read_block(rootPtr.block_id);
-    Node *node = rootBlock.getNode();
+    float record_count = 0;
 
     // access root node
     ++node_access_count;
@@ -49,55 +46,21 @@ void experiment_3(Disk &disk, BPTree &bpTree)
     std::vector<RecordPtr> result_ptrs;
 
     time_t start_time_index = get_current_time();
-
-    while (!node->isLeaf)
-    {
-        size_t i;
-        for (i = 1; i <= node->numKeys; i++)
-        {
-            if (node->nodeKeyArr[i - 1] >= search_val)
-                break;
-        }
-
-        RecordPtr ptr = node->nodeRecordPtrArr[i - 1][0];
-        Block tmp_blk = disk.read_block(ptr.block_id);
-        node = tmp_blk.getNode();
-        ++node_access_count;
-    }
+    Node *lf_node = bpTree.findLeafNode(search_val, node_access_count);
 
     // find the pointer to the records
-    for (size_t i = 0; i < node->numKeys; i++)
+    for (size_t i = 0; i < lf_node->numKeys; i++)
     {
-        if (node->nodeKeyArr[i] == search_val)
+        if (lf_node->nodeKeyArr[i] >= search_val)
         {
-            result_ptrs = node->nodeRecordPtrArr[i];
+            result_ptrs = lf_node->nodeRecordPtrArr[i];
             break;
         }
     }
 
-    for (RecordPtr ptr : result_ptrs)
-    {
-        Block result_blk;
-        int blk_id = ptr.block_id;
-
-        if (data_block_cache.count(blk_id))
-        {
-            result_blk = data_block_cache[blk_id];
-        }
-        else
-        {
-            result_blk = disk.read_block(blk_id);
-            data_block_cache[blk_id] = result_blk;
-        }
-
-        Record result_rec = result_blk.read_record(ptr.block_offset);
-
-        // print all records found
-        // if (true)
-        //     std::cout << result_rec << std::endl;
-
-        rating_sum += result_rec.average_rating;
-    }
+    ReadRecordResult res = read_all_records(disk, result_ptrs, data_block_cache);
+    rating_sum = res.rating_sum;
+    record_count = res.record_count;
 
     size_t blocks_accessed_linear = 0;
     size_t linear_result_count = 0;
@@ -115,7 +78,7 @@ void experiment_3(Disk &disk, BPTree &bpTree)
 
         for (size_t r_i = 0; r_i < block.get_record_count(); ++r_i)
         {
-            Record record = block.read_record(r_i * sizeof(Record));
+            Record record = block.read_record((int)r_i * sizeof(Record));
             if (record.num_votes == 500)
                 ++linear_result_count;
         }
@@ -123,10 +86,10 @@ void experiment_3(Disk &disk, BPTree &bpTree)
 
     uint64_t time_taken_linear = get_time_taken(start_time_linear);
 
-    std::cout << "\nNumber of records with numVotes=500: " << result_ptrs.size() << std::endl;
+    std::cout << "\nNumber of records with numVotes=500: " << record_count << std::endl;
     std::cout << "Number of index nodes accessed: " << node_access_count << std::endl;
     std::cout << "Number of data blocks accessed: " << data_block_cache.size() << std::endl;
-    std::cout << "Average rating: " << rating_sum / result_ptrs.size() << std::endl;
+    std::cout << "Average rating: " << rating_sum / record_count << std::endl;
     std::cout << "Time taken searching using B+ tree: " << time_taken_index << "ms" << std::endl;
     std::cout << "Number of data blocks accessed for linear scan: " << blocks_accessed_linear << std::endl;
     std::cout << "Time taken for linear scan: " << time_taken_linear << "ms" << std::endl;
@@ -137,10 +100,7 @@ void experiment_4(Disk &disk, BPTree &bpTree)
     std::map<size_t, Block> data_block_cache; // keep track number of blocks read to "memory"
     size_t node_access_count = 0;             // no. of node blocks read
     float rating_sum = 0;
-
-    RecordPtr rootPtr = bpTree.getRoot();
-    Block rootBlock = disk.read_block(rootPtr.block_id);
-    Node *node = rootBlock.getNode();
+    float record_count = 0;
 
     // access root node
     ++node_access_count;
@@ -151,53 +111,32 @@ void experiment_4(Disk &disk, BPTree &bpTree)
 
     time_t start_time_index = get_current_time();
 
-    while (!node->isLeaf)
+    Node *lf_node = bpTree.findLeafNode(start_search_val, node_access_count);
+
+    // find the pointer to the records until leaf node is out of search range
+    while (lf_node->nodeKeyArr[0] <= end_search_val)
     {
-        size_t i;
-        for (i = 1; i <= node->numKeys; i++)
+        // search leaf node for key between 30-40k
+        for (size_t i = 0; i < lf_node->numKeys; i++)
         {
-             if ((start_search_val <= node->nodeKeyArr[i - 1]) && (node->nodeKeyArr[i - 1] >= end_search_val))
-                break;
+            if (start_search_val <= lf_node->nodeKeyArr[i] && lf_node->nodeKeyArr[i] <= end_search_val)
+            {
+                result_ptrs = lf_node->nodeRecordPtrArr[i];
+                ReadRecordResult res = read_all_records(disk, result_ptrs, data_block_cache);
+                rating_sum += res.rating_sum;
+                record_count += res.record_count;
+            }
         }
 
-        RecordPtr ptr = node->nodeRecordPtrArr[i - 1][0];
-        Block tmp_blk = disk.read_block(ptr.block_id);
-        node = tmp_blk.getNode();
-        ++node_access_count;
-    }
-
-    // find the pointer to the records
-    for (size_t i = 0; i < node->numKeys; i++)
-    {
-        if ((start_search_val <= node->nodeKeyArr[i]) && (node->nodeKeyArr[i] <= end_search_val ))
-        {
-            result_ptrs = node->nodeRecordPtrArr[i];
+        // quit if current leaf node is the end
+        if (lf_node->nodeKeyArr[lf_node->numKeys - 1] > end_search_val)
             break;
-        }
-    }
 
-    for (RecordPtr ptr : result_ptrs)
-    {
-        Block result_blk;
-        int blk_id = ptr.block_id;
-
-        if (data_block_cache.count(blk_id))
-        {
-            result_blk = data_block_cache[blk_id];
-        }
-        else
-        {
-            result_blk = disk.read_block(blk_id);
-            data_block_cache[blk_id] = result_blk;
-        }
-
-        Record result_rec = result_blk.read_record(ptr.block_offset);
-
-        //print all records found
-        if (true)
-            std::cout << result_rec << std::endl;
-
-        rating_sum += result_rec.average_rating;
+        // go to next leaf node
+        RecordPtr ptr = lf_node->nodeRecordPtrArr[lf_node->nodeRecordPtrArr.size() - 1][0];
+        Block tmp_block = disk.read_block(ptr.block_id);
+        lf_node = tmp_block.getNode();
+        ++node_access_count;
     }
 
     size_t blocks_accessed_linear = 0;
@@ -216,18 +155,18 @@ void experiment_4(Disk &disk, BPTree &bpTree)
 
         for (size_t r_i = 0; r_i < block.get_record_count(); ++r_i)
         {
-            Record record = block.read_record(r_i * sizeof(Record));
-            if (start_search_val <= record.num_votes <= end_search_val)
+            Record record = block.read_record((int)r_i * sizeof(Record));
+            if (start_search_val <= record.num_votes && record.num_votes <= end_search_val)
                 ++linear_result_count;
         }
     }
 
     uint64_t time_taken_linear = get_time_taken(start_time_linear);
 
-    std::cout << "\nNumber of records from 30,000 to 40,000: " << result_ptrs.size() << std::endl;
+    std::cout << "\nNumber of records from 30,000 to 40,000: " << record_count << std::endl;
     std::cout << "Number of index nodes accessed: " << node_access_count << std::endl;
     std::cout << "Number of data blocks accessed: " << data_block_cache.size() << std::endl;
-    std::cout << "Average rating: " << rating_sum / result_ptrs.size() << std::endl;
+    std::cout << "Average rating: " << rating_sum / record_count << std::endl;
     std::cout << "Time taken searching using B+ tree: " << time_taken_index << "ms" << std::endl;
     std::cout << "Number of data blocks accessed for linear scan: " << blocks_accessed_linear << std::endl;
     std::cout << "Time taken for linear scan: " << time_taken_linear << "ms" << std::endl;

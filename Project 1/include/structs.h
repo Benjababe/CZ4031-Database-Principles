@@ -19,4 +19,10 @@ struct RecordPtr
     int block_offset = 0;
 };
 
+struct ReadRecordResult
+{
+    float rating_sum = 0;
+    float record_count = 0;
+};
+
 #endif
