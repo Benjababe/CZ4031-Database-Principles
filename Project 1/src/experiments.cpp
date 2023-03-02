@@ -171,3 +171,23 @@ void experiment_4(Disk &disk, BPTree &bpTree)
     std::cout << "Number of data blocks accessed for linear scan: " << blocks_accessed_linear << std::endl;
     std::cout << "Time taken for linear scan: " << time_taken_linear << "ms" << std::endl;
 }
+
+void experiment_5(BPTree &bpTree, int numVotes)
+{
+    time_t start_time_delete = get_current_time();
+    bpTree.deleteNode(numVotes);
+    uint64_t time_taken_delete = get_time_taken(start_time_delete);
+
+    std::cout << "Time taken to delete a node : " << time_taken_delete << std::endl;
+    std::cout << "number of nodes of b+ tree : " << bpTree.numNodes << std::endl;
+    std::cout << "number of levels of b+ tree : " << bpTree.height << std::endl;
+    Node *rootNode = bpTree.disk->getBlockPtr(bpTree.getRoot().block_id)->getNode();
+    std::cout << "Keys of root node : ";
+    for (int i = 0; i < rootNode->numKeys; i++)
+    {
+        std::cout << rootNode->nodeKeyArr[i];
+        if (i + 1 != rootNode->numKeys)
+            std::cout << ", ";
+    }
+    std::cout << std::endl;
+}
