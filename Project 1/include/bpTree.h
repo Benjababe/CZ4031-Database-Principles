@@ -38,7 +38,7 @@ public:
     int getSmallestKeyInSubtree(RecordPtr parent);
     RecordPtr getRoot();
     int getNumLeafNodes();
-    void addLeftRight(int left, int right, std::vector<RecordPtr> parentRecordPtr);
+    void addLeftRight(int left, int right, std::vector<RecordPtr> parentRecordPtr, Node *curNode);
     void deleteNode(int numVotes);
     void updateParentNodes(std::vector<RecordPtr> parentRecordPtr, int numVotestemp, int newVotes);
     void FixInternal(std::vector<RecordPtr> parentRecordPtr, RecordPtr deletedPtr);
