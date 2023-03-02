@@ -498,6 +498,7 @@ void BPTree::deleteNode(int numVotes)
             std::cout << "Key not found\n";
             return;
         }
+        
         // we could find the key
         // update the key to the next key value
         int numVotestemp = curNode->nodeKeyArr[0]; // we need the first key of node to merge
@@ -538,6 +539,7 @@ void BPTree::deleteNode(int numVotes)
 
         parentRecordPtr.pop_back(); // pop the left node
 
+        
         // Case 2: We can borrow from the left or right sibling
 
         // leftNode has enough nodes to share
@@ -639,7 +641,7 @@ void BPTree::deleteNode(int numVotes)
             this->numNodes--;
 
             this->FixInternal(parentRecordPtr, rightPtr); // fix the remaining internal nodes
-            delete curNode;
+            delete rightNode;
             return;
         }
     }
