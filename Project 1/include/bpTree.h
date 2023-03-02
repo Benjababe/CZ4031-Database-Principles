@@ -37,10 +37,12 @@ public:
     int getIndexToInsert(int numVotes, Node *curNode);
     int getSmallestKeyInSubtree(RecordPtr parent);
     RecordPtr getRoot();
-    Node *findLeafNode(int, size_t &);
     int getNumLeafNodes();
-    void delete(int numVotes);
     void addLeftRight(int left, int right, std::vector<RecordPtr> parentRecordPtr);
+    void deleteNode(int numVotes);
+    void updateParentNodes(std::vector<RecordPtr> parentRecordPtr, int numVotestemp, int newVotes);
+    void FixInternal(std::vector<RecordPtr> parentRecordPtr, RecordPtr deletedPtr);
+    int Traverse(RecordPtr traversePtr);
 
 private:
     RecordPtr root; // pointer to block that contains root node
