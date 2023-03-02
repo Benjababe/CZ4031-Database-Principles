@@ -37,6 +37,7 @@ public:
     int getIndexToInsert(int numVotes, Node *curNode);
     int getSmallestKeyInSubtree(RecordPtr parent);
     RecordPtr getRoot();
+    Node *findLeafNode(int, size_t &);
     int getNumLeafNodes();
     void addLeftRight(int left, int right, std::vector<RecordPtr> parentRecordPtr, Node *curNode);
     void deleteNode(int numVotes);

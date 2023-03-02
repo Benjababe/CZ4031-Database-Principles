@@ -407,6 +407,38 @@ RecordPtr BPTree::getRoot()
 }
 
 /**
+ * @brief Returns leaf node possibly containing the search value
+ *
+ * @param search_val
+ * @param node_access_count Value to keep track of number of index nodes accessed
+ * @return Node* pointer to the leaf node
+ */
+Node *BPTree::findLeafNode(int search_val, size_t &node_access_count)
+{
+    RecordPtr rootPtr = this->root;
+    Block rootBlock = this->disk->read_block(rootPtr.block_id);
+    Node *node = rootBlock.getNode();
+
+    while (!node->isLeaf)
+    {
+        size_t i;
+        for (i = 1; i <= node->numKeys; i++)
+        {
+            if (node->nodeKeyArr[i - 1] >= search_val)
+                break;
+        }
+        if (node->nodeRecordPtrArr.size() == 0)
+            int x = 0;
+        RecordPtr ptr = node->nodeRecordPtrArr[i - 1][0];
+        Block tmp_blk = this->disk->read_block(ptr.block_id);
+        node = tmp_blk.getNode();
+        ++node_access_count;
+    }
+
+    return node;
+}
+
+/**
  * @brief Get total number of leaf nodes
  *
  * @return number of leaf nodes
@@ -744,15 +776,15 @@ void BPTree::FixInternal(std::vector<RecordPtr> parentRecordPtr, RecordPtr delet
             {
                 if (curParentNode->nodeRecordPtrArr[i][0].block_id == deletedPtr.block_id)
                 {
-                    int j;
-                    for (j = i; j < rootNode->numKeys; j++){
-                        curParentNode->nodeRecordPtrArr[i] = curParentNode->nodeRecordPtrArr[i + 1];
-                        curParentNode->nodeKeyArr[i - 1] = curParentNode->nodeKeyArr[i]; 
-                    }
-                    curParentNode->nodeRecordPtrArr[j] = std::vector<RecordPtr>(1);
-                    curParentNode->nodeKeyArr[j-1] = 0;
-                    int newVotes = this->Traverse(curParentNode->nodeRecordPtrArr[0][0]);
-                    this->updateParentNodes(parentRecordPtr, tempVotes, newVotes);
+                    // int j;
+                    // for (j = i; j < rootNode->numKeys; j++){   //Duc ahn, please look at this
+                    //     curParentNode->nodeRecordPtrArr[i] = curParentNode->nodeRecordPtrArr[i + 1];
+                    //     curParentNode->nodeKeyArr[i - 1] = curParentNode->nodeKeyArr[i]; 
+                    // }
+                    // curParentNode->nodeRecordPtrArr[j] = std::vector<RecordPtr>(1);
+                    // curParentNode->nodeKeyArr[j-1] = 0;
+                    // int newVotes = this->Traverse(curParentNode->nodeRecordPtrArr[0][0]);
+                    // this->updateParentNodes(parentRecordPtr, tempVotes, newVotes);
                     return;
                 }
             }

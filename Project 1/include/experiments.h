@@ -11,4 +11,4 @@ void experiment_1(std::vector<RecordPtr> &);
 void experiment_2(BPTree &bptree);
 void experiment_3(Disk &, BPTree &);
 void experiment_4(Disk &, BPTree &);
-void experiment_5(BPTree &bpTree, int numVotes);
+void experiment_5(Disk &, BPTree &bpTree, int numVotes);

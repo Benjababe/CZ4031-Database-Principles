@@ -25,7 +25,7 @@ int main()
     experiment_2(bpTree);
     experiment_3(disk, bpTree);
     experiment_4(disk, bpTree);
-    experiment_5(bpTree, 1000);
+    experiment_5(disk, bpTree, 1000);
 
     return 0;
 }
