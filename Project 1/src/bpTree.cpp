@@ -530,7 +530,7 @@ void BPTree::deleteNode(int numVotes)
             std::cout << "Key not found\n";
             return;
         }
-        
+
         // we could find the key
         // update the key to the next key value
         int numVotestemp = curNode->nodeKeyArr[0]; // we need the first key of node to merge
@@ -571,7 +571,6 @@ void BPTree::deleteNode(int numVotes)
 
         parentRecordPtr.pop_back(); // pop the left node
 
-        
         // Case 2: We can borrow from the left or right sibling
 
         // leftNode has enough nodes to share
@@ -719,15 +718,16 @@ void BPTree::FixInternal(std::vector<RecordPtr> parentRecordPtr, RecordPtr delet
                 if (rootNode->nodeRecordPtrArr[i][0].block_id == deletedPtr.block_id)
                 {
                     int j;
-                    for (j = i; j < rootNode->numKeys; j++){
+                    for (j = i; j < rootNode->numKeys; j++)
+                    {
                         rootNode->nodeRecordPtrArr[i] = rootNode->nodeRecordPtrArr[i + 1];
-                        rootNode->nodeKeyArr[i - 1] = rootNode->nodeKeyArr[i]; 
+                        rootNode->nodeKeyArr[i - 1] = rootNode->nodeKeyArr[i];
                     }
                     rootNode->nodeRecordPtrArr[j] = std::vector<RecordPtr>(1);
-                    rootNode->nodeKeyArr[j-1] = 0;
+                    rootNode->nodeKeyArr[j - 1] = 0;
                     return;
                 }
-            }  
+            }
         }
         else // we will remove the root
         {
@@ -779,7 +779,7 @@ void BPTree::FixInternal(std::vector<RecordPtr> parentRecordPtr, RecordPtr delet
                     // int j;
                     // for (j = i; j < rootNode->numKeys; j++){   //Duc ahn, please look at this
                     //     curParentNode->nodeRecordPtrArr[i] = curParentNode->nodeRecordPtrArr[i + 1];
-                    //     curParentNode->nodeKeyArr[i - 1] = curParentNode->nodeKeyArr[i]; 
+                    //     curParentNode->nodeKeyArr[i - 1] = curParentNode->nodeKeyArr[i];
                     // }
                     // curParentNode->nodeRecordPtrArr[j] = std::vector<RecordPtr>(1);
                     // curParentNode->nodeKeyArr[j-1] = 0;
@@ -810,8 +810,9 @@ void BPTree::FixInternal(std::vector<RecordPtr> parentRecordPtr, RecordPtr delet
                             {
                                 curParentNode->nodeRecordPtrArr[j] = curParentNode->nodeRecordPtrArr[j - 1];
                             }
-                            for (int j = i - 1; j > 0; j--){
-                                curParentNode->nodeKeyArr[j] = curParentNode->nodeKeyArr[j-1];
+                            for (int j = i - 1; j > 0; j--)
+                            {
+                                curParentNode->nodeKeyArr[j] = curParentNode->nodeKeyArr[j - 1];
                             }
                             curParentNode->numKeys--;
                             curParentNode->nodeKeyArr[0] = this->Traverse(curParentNode->nodeRecordPtrArr[1][0]);
@@ -968,7 +969,6 @@ void BPTree::updateParentNodes(std::vector<RecordPtr> parentRecordPtr, int numVo
     }
 }
 
-
 int BPTree::Traverse(RecordPtr traversePtr)
 {
     Block *cur = this->disk->getBlockPtr(traversePtr.block_id);
@@ -980,4 +980,69 @@ int BPTree::Traverse(RecordPtr traversePtr)
         Node *curNode = cur->getNode();
     }
     return curNode->nodeKeyArr[0];
+}
+
+void BPTree::printTree()
+{
+    Node *rootNode = printKeyArray(this->root.block_id);
+    std::cout << "root end" << std::endl
+              << std::endl;
+
+    if (this->height == 2)
+    {
+        for (int i = 0; i < rootNode->numKeys + 1; i++)
+        {
+            printKeyArray(rootNode->nodeRecordPtrArr[i][0].block_id);
+        }
+    }
+    else if (this->height == 3)
+    {
+        for (int i = 0; i < rootNode->numKeys + 1; i++)
+        {
+            Node *curNode = printKeyArray(rootNode->nodeRecordPtrArr[i][0].block_id);
+            std::cout << "non-leaf node " << i << " end" << std::endl
+                      << std::endl;
+
+            for (int i = 0; i < curNode->numKeys + 1; i++)
+            {
+                printKeyArray(curNode->nodeRecordPtrArr[i][0].block_id);
+                std::cout << "leaf node " << i << " end" << std::endl
+                          << std::endl;
+            }
+        }
+    }
+    else if (this->height == 4)
+    {
+        for (int i = 0; i < rootNode->numKeys + 1; i++)
+        {
+            Node *level2Node = printKeyArray(rootNode->nodeRecordPtrArr[i][0].block_id);
+            std::cout << "level 2 non-leaf node " << i << " end" << std::endl
+                      << std::endl;
+
+            for (int i = 0; i < level2Node->numKeys + 1; i++)
+            {
+                Node *level1Node = printKeyArray(level2Node->nodeRecordPtrArr[i][0].block_id);
+                std::cout << "level 1 non-leaf node " << i << " end" << std::endl
+                          << std::endl;
+
+                for (int i = 0; i < level1Node->numKeys + 1; i++)
+                {
+                    Node *leafNode = printKeyArray(level1Node->nodeRecordPtrArr[i][0].block_id);
+                    std::cout << "leaf node " << i << " end" << std::endl
+                              << std::endl;
+                }
+            }
+        }
+    }
+}
+
+Node *BPTree::printKeyArray(int blockId)
+{
+    Block *curBlock = this->disk->getBlockPtr(blockId);
+    Node *curNode = curBlock->getNode();
+    for (int i = 0; i < curNode->numKeys; i++)
+    {
+        std::cout << "key value: " << curNode->nodeKeyArr[i] << std::endl;
+    }
+    return curNode;
 }

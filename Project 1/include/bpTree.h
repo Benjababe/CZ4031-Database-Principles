@@ -44,6 +44,8 @@ public:
     void updateParentNodes(std::vector<RecordPtr> parentRecordPtr, int numVotestemp, int newVotes);
     void FixInternal(std::vector<RecordPtr> parentRecordPtr, RecordPtr deletedPtr);
     int Traverse(RecordPtr traversePtr);
+    void printTree();
+    Node *printKeyArray(int);
 
 private:
     RecordPtr root; // pointer to block that contains root node
