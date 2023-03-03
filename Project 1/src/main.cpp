@@ -21,6 +21,7 @@ int main()
     BPTree bpTree(record_ptrs, disk);
     read_data_file(disk, record_ptrs, bpTree);
 
+    std::cout << std::endl;
     experiment_1(record_ptrs);
     experiment_2(bpTree);
     experiment_3(disk, bpTree);

@@ -3,7 +3,7 @@
 uint64_t get_current_time()
 {
     using namespace std::chrono;
-    return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+    return duration_cast<microseconds>(system_clock::now().time_since_epoch()).count();
 }
 
 uint64_t get_time_taken(uint64_t start_time)

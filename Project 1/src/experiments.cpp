@@ -9,18 +9,19 @@ void experiment_1(std::vector<RecordPtr> &record_ptrs)
 {
     RecordPtr last = record_ptrs[record_ptrs.size() - 1];
 
+    std::cout << "\nExperiment 1:" << std::endl;
     std::cout << "Number of records: " << record_ptrs.size() << std::endl;
     std::cout << "Size of a record: " << sizeof(Record) << " bytes" << std::endl;
     std::cout << "Number of records in a block: " << 200 / sizeof(Record) << std::endl;
     std::cout << "Number of blocks used: " << last.block_id + 1 << std::endl;
-    std::cout << std::endl;
 }
 
 void experiment_2(BPTree &bpTree)
 {
-    std::cout << "parameter n of b+ tree : " << bpTree.maxKeys << std::endl;
-    std::cout << "number of nodes of b+ tree : " << bpTree.numNodes << std::endl;
-    std::cout << "number of levels of b+ tree : " << bpTree.height << std::endl;
+    std::cout << "\nExperiment 2:" << std::endl;
+    std::cout << "Parameter n of b+ tree : " << bpTree.maxKeys << std::endl;
+    std::cout << "Number of nodes of b+ tree : " << bpTree.numNodes << std::endl;
+    std::cout << "Number of levels of b+ tree : " << bpTree.height << std::endl;
     Node *rootNode = bpTree.disk->getBlockPtr(bpTree.getRoot().block_id)->getNode();
     std::cout << "Keys of root node : ";
     for (int i = 0; i < rootNode->numKeys; i++)
@@ -86,13 +87,14 @@ void experiment_3(Disk &disk, BPTree &bpTree)
 
     uint64_t time_taken_linear = get_time_taken(start_time_linear);
 
-    std::cout << "\nNumber of records with numVotes=500: " << record_count << std::endl;
+    std::cout << "\nExperiment 3:" << std::endl;
+    std::cout << "Number of records with numVotes=500: " << record_count << std::endl;
     std::cout << "Number of index nodes accessed: " << node_access_count << std::endl;
     std::cout << "Number of data blocks accessed: " << data_block_cache.size() << std::endl;
     std::cout << "Average rating: " << rating_sum / record_count << std::endl;
-    std::cout << "Time taken searching using B+ tree: " << time_taken_index << "ms" << std::endl;
+    std::cout << "Time taken searching using B+ tree: " << time_taken_index << "μs" << std::endl;
     std::cout << "Number of data blocks accessed for linear scan: " << blocks_accessed_linear << std::endl;
-    std::cout << "Time taken for linear scan: " << time_taken_linear << "ms" << std::endl;
+    std::cout << "Time taken for linear scan: " << time_taken_linear << "μs" << std::endl;
 }
 
 void experiment_4(Disk &disk, BPTree &bpTree)
@@ -163,13 +165,14 @@ void experiment_4(Disk &disk, BPTree &bpTree)
 
     uint64_t time_taken_linear = get_time_taken(start_time_linear);
 
-    std::cout << "\nNumber of records from 30,000 to 40,000: " << record_count << std::endl;
+    std::cout << "\nExperiment 4:" << std::endl;
+    std::cout << "Number of records from 30,000 to 40,000: " << record_count << std::endl;
     std::cout << "Number of index nodes accessed: " << node_access_count << std::endl;
     std::cout << "Number of data blocks accessed: " << data_block_cache.size() << std::endl;
     std::cout << "Average rating: " << rating_sum / record_count << std::endl;
-    std::cout << "Time taken searching using B+ tree: " << time_taken_index << "ms" << std::endl;
+    std::cout << "Time taken searching using B+ tree: " << time_taken_index << "μs" << std::endl;
     std::cout << "Number of data blocks accessed for linear scan: " << blocks_accessed_linear << std::endl;
-    std::cout << "Time taken for linear scan: " << time_taken_linear << "ms" << std::endl;
+    std::cout << "Time taken for linear scan: " << time_taken_linear << "μs" << std::endl;
 }
 
 void experiment_5(Disk &disk, BPTree &bpTree, int numVotes)
@@ -178,11 +181,11 @@ void experiment_5(Disk &disk, BPTree &bpTree, int numVotes)
     time_t start_time_index = get_current_time();
     bpTree.deleteNode(numVotes);
     uint64_t time_taken_delete = get_time_taken(start_time_delete);
-    
+
     std::map<size_t, Block> data_block_cache;
     std::vector<RecordPtr> result_ptrs;
     ReadRecordResult res = read_all_records(disk, result_ptrs, data_block_cache);
-    
+
     size_t blocks_accessed_linear = 0;
     size_t linear_result_count = 0;
     uint64_t time_taken_index = get_time_taken(start_time_index);
@@ -206,6 +209,7 @@ void experiment_5(Disk &disk, BPTree &bpTree, int numVotes)
 
     uint64_t time_taken_linear = get_time_taken(start_time_linear);
 
+    std::cout << "\nExperiment 5:" << std::endl;
     std::cout << "Time taken to delete a node : " << time_taken_delete << std::endl;
     std::cout << "number of nodes of b+ tree : " << bpTree.numNodes << std::endl;
     std::cout << "number of levels of b+ tree : " << bpTree.height << std::endl;
@@ -218,9 +222,7 @@ void experiment_5(Disk &disk, BPTree &bpTree, int numVotes)
             std::cout << ", ";
     }
     std::cout << std::endl;
-    std::cout << "Time taken searching using B+ tree: " << time_taken_index << "ms" << std::endl;
+    std::cout << "Time taken searching using B+ tree: " << time_taken_index << "μs" << std::endl;
     std::cout << "Number of data blocks accessed for linear scan: " << blocks_accessed_linear << std::endl;
-    std::cout << "Time taken for linear scan: " << time_taken_linear << "ms" << std::endl;
-
-   
+    std::cout << "Time taken for linear scan: " << time_taken_linear << "μs" << std::endl;
 }
