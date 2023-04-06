@@ -13,6 +13,14 @@
             "justMyCode": true
         },
         {
+            "name": "Python: project.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/project.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
             "name": "Insert data",
             "type": "python",
             "request": "launch",

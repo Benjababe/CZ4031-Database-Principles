@@ -243,6 +243,13 @@ def create_tables():
             OWNER to postgres;
     '''
 
+    create_indexes = '''
+        CREATE INDEX idx_orders_cover ON orders (o_orderkey, o_custkey, o_orderdate);
+        CREATE INDEX idx_lineitem_cover ON lineitem (l_orderkey, l_extendedprice, l_discount);
+        CREATE INDEX idx_customer_cover ON customer (c_custkey, c_nationkey);
+        CREATE INDEX idx_nation_cover ON nation (n_nationkey, n_name);
+    '''
+
     cur.execute(create_region)
     cur.execute(create_nation)
     cur.execute(create_part)
@@ -251,6 +258,7 @@ def create_tables():
     cur.execute(create_customer)
     cur.execute(create_orders)
     cur.execute(create_lineitem)
+    cur.execute(create_indexes)
 
     conn.commit()
     cur.close()
