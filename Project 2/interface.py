@@ -118,8 +118,6 @@ def rightArrow(node):
 
 
 nodeList = {}
-leftDegree = -170
-rightDegree = -10
 
 
 def preOrder(node, d, arrow, numChild, parentIndex, childIndex):
@@ -227,6 +225,8 @@ while True:
     if event == "graph" and not window2Active:
         window2Active = True
         with schemdraw.Drawing(show=False) as d:
+            leftDegree = -170
+            rightDegree = -10
             preOrder(input, d, None, 0, 0, 0)
             d.save(fname="graph1.svg")
             cairosvg.svg2png(url="graph1.svg", write_to="graph1.png")
