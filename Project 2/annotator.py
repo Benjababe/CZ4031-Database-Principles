@@ -1,4 +1,5 @@
 from __future__ import annotations
+from functools import reduce
 
 
 intermediate_count = 0
@@ -11,8 +12,12 @@ class ReadableNode:
     children: list[ReadableNode]
     table_name: str
 
+    # returns numbered sequence of steps
     def __str__(self):
-        return "\n".join(self.get_query_steps())
+        return reduce(
+            lambda acc, step: acc + f"{step[0]}. {step[1]}\n",
+            enumerate(self.get_query_steps(), start=1), ""
+        )
 
     def __init__(self, node: dict, is_root=False):
         node_type = node["Node Type"]
@@ -170,6 +175,14 @@ class ReadableNode:
                 key = node['Sort Key']
                 self.table_name = self.children[0].table_name
                 self.description = f"Sort done on {self.table_name} using sort key {key}"
+
+            case _:
+                # edge case for any node types not handled thus far
+                self.description = f"Unhandled node type found ({node_type}), add a handler for this node type!!"
+                if len(self.children) > 0:
+                    self.table_name = self.children[0].table_name
+                else:
+                    self.generate_intermediate_table()
 
     def generate_intermediate_table(self):
         """Creates an intermediate table name for the current node
