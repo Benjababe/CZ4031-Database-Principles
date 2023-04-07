@@ -11,3 +11,5 @@ DB_PASSWORD=xxx
 DB_HOST=localhost
 DB_PORT=5432
 ```
+
+Python 3.11 was used during development and is recommended. 3.10 should be the minimum as structural pattern matching is used.

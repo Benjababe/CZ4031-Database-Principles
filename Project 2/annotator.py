@@ -14,10 +14,7 @@ class ReadableNode:
 
     # returns numbered sequence of steps
     def __str__(self):
-        return reduce(
-            lambda acc, step: acc + f"{step[0]}. {step[1]}\n",
-            enumerate(self.get_query_steps(), start=1), ""
-        )
+        return generate_numbered_list(self.get_query_steps())
 
     def __init__(self, node: dict, is_root=False):
         node_type = node["Node Type"]
@@ -167,10 +164,18 @@ class ReadableNode:
                 self.table_name = self.children[0].table_name
                 self.description = f"Hashing done on {self.table_name}"
 
+            case "Materialize":
+                c1 = self.children[0]
+                self.description = f"Materialized table {c1.table_name}"
+
+                if not is_root:
+                    self.generate_intermediate_table()
+
             case "Memoize":
                 self.table_name = self.children[0].table_name
                 self.description = f"Memoization done on {self.table_name}"
 
+            # sorting does not create an intermediate table
             case "Sort":
                 key = node['Sort Key']
                 self.table_name = self.children[0].table_name
@@ -211,8 +216,79 @@ class ReadableNode:
 
 
 def build_readable_tree(qep: dict) -> ReadableNode:
+    """Parses the JSON output from postgres to a tree structure
+
+    Args:
+        qep (dict): EXPLAIN formatted as JSON from postgres
+
+    Returns:
+        ReadableNode: Root node of the QEP
+    """
+
     global intermediate_count
     intermediate_count = 0
 
     readable_node = ReadableNode(qep, is_root=True)
     return readable_node
+
+
+def generate_numbered_list(l: list[str]) -> str:
+    """Returns a joined string of the list with numbering
+
+    Args:
+        l (list[str]): List of strings for plans or changes
+
+    Returns:
+        str: All strings numbered and joined
+    """
+
+    return reduce(
+        lambda acc, step: acc + f"{step[0]}. {step[1]}\n",
+        enumerate(l, start=1), ""
+    )
+
+
+def get_qep_difference(n1: ReadableNode, n2: ReadableNode, diff_count: int = 0) -> list[str]:
+    """Generates a list of differences between n1 (old) and n2 (new)
+
+    Args:
+        n1 (ReadableNode): Node in the old QEP
+        n2 (ReadableNode): Node in the new QEP
+        diff_count (int, optional): Number of current differences. Defaults to 0.
+
+    Returns:
+        list[str]: List of differences
+    """
+
+    differences = []
+
+    # if both nodes are exactly the same, go to their children
+    if n1.name == n2.name and len(n1.children) == len(n2.children):
+        for i in range(len(n1.children)):
+            diff = get_qep_difference(
+                n1.children[i], n2.children[i], diff_count)
+            differences.extend(diff)
+
+    else:
+        # trivial operation for node 1, skipping it
+        if n1.name == "Hash" or n1.name == "Sort" or "Gather" in n1.name:
+            diff = get_qep_difference(n1.children[0], n2, diff_count)
+            differences.extend(diff)
+
+        # trivial operation for node 2, skipping it
+        elif n2.name == "Hash" or n2.name == "Sort" or "Gather" in n2.name:
+            diff = get_qep_difference(n1, n2.children[0], diff_count)
+            differences.extend(diff)
+
+        else:
+            diff_count += 1
+            diff = f"{n1.description} has been changed to {n2.description}"
+            differences.append(diff)
+
+        if len(n1.children) == len(n2.children):
+            for i in range(len(n1.children)):
+                diff = get_qep_difference(
+                    n1.children[i], n2.children[i], diff_count)
+                differences.extend(diff)
+
+    return differences

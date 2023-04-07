@@ -23,67 +23,36 @@ def get_query_execution_plan(connection, query: str):
         return result[0][0]['Plan']
 
 
-def cmp_nodes(n1: dict, n2: dict) -> bool:
-    if n1 is None or n2 is None:
-        return n1 is None and n2 is None
-
-    return n1["Node Type"] == n2["Node Type"]
-
-
-def is_subtree(t1: dict, t2: dict) -> bool:
-    if t2 is None:
-        return True
-
-    if t1 is None:
-        return False
-
-    if cmp_nodes(t1, t2):
-        left_is_subtree = is_subtree(t1.get("Plans", [])[0] if t1.get("Plans") else None,
-                                     t2.get("Plans", [])[0] if t2.get("Plans") else None)
-        right_is_subtree = is_subtree(t1.get("Plans", [])[1] if len(t1.get("Plans", [])) > 1 else None,
-                                      t2.get("Plans", [])[1] if len(t2.get("Plans", [])) > 1 else None)
-
-        if left_is_subtree and right_is_subtree:
-            return True
-
-    return is_subtree(t1.get("Plans", [])[0] if t1.get("Plans") else None, t2) or is_subtree(t1.get("Plans", [])[1] if len(t1.get("Plans", [])) > 1 else None, t2)
-
-
-def contains_subtree(t1: dict, t2: dict) -> bool:
-    if t2 is None:
-        return True
-
-    if t1 is None:
-        return False
-
-    if is_subtree(t1, t2):
-        return True
-
-    return contains_subtree(t1.get("Plans", [])[0] if t1.get("Plan") else None, t2) or \
-        contains_subtree(t1.get("Plans", [])[1] if len(
-            t1.get("Plan", [])) > 1 else None, t2)
-
-
 def main():
     query1 = '''
-        SELECT MAX(o_totalprice)
-        FROM orders o
-        JOIN lineitem li ON o.o_orderkey = li.l_orderkey
-        JOIN customer c ON o.o_custkey = c.c_custkey
+        select *
+from (SELECT supplier.s_nationkey,supplier.s_suppkey FROM supplier WHERE 200<s_suppkey) AS a
+join (SELECT nation.n_nationkey, nation.n_regionkey FROM nation) As b
+on a.s_nationkey = b.n_nationkey
     '''
     qep1 = get_query_execution_plan(connection, query1)
 
-    query2 = '''SELECT * FROM customer c, orders o WHERE c.c_custkey = o.o_custkey ORDER BY c.c_custkey'''
+    query2 = '''
+        select *
+from (SELECT supplier.s_nationkey,supplier.s_suppkey FROM supplier  WHERE 200>s_suppkey ORDER BY supplier.s_nationkey) AS a
+join (SELECT nation.n_nationkey, nation.n_regionkey FROM nation ORDER BY nation.n_nationkey) As b
+on a.s_nationkey = b.n_nationkey
+    '''
     qep2 = get_query_execution_plan(connection, query2)
 
-    # x = contains_subtree(qep2, qep1)
+    n1 = annotator.build_readable_tree(qep1)
+    n2 = annotator.build_readable_tree(qep2)
 
-    y = annotator.build_readable_tree(qep1)
-    z = annotator.build_readable_tree(qep2)
-
-    print(y)
+    print("==QEP STRUCTURES==")
+    print(n1)
     print()
-    print(z)
+    print(n2)
+
+    d = annotator.get_qep_difference(n1, n2)
+    print("==DIFFERENCES==")
+    print(annotator.generate_numbered_list(d))
+
+    a = False
 
 
 if __name__ == "__main__":
