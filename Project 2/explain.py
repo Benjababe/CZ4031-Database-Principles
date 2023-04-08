@@ -50,18 +50,20 @@ class ReadableNode:
 
         match node_type:
             case "Seq Scan":
-                rel_name = node['Relation Name']
-                alias = node['Alias']
+                rel_name = node["Relation Name"]
+                alias = node["Alias"]
 
                 self.table_name = rel_name
-                self.description = f"Sequential scan done on {rel_name} with alias {alias}"
+                self.description = (
+                    f"Sequential scan done on {rel_name} with alias {alias}"
+                )
 
                 if "Filter" in node:
                     self.description += f" using filter {node['Filter']}"
 
             case "Index Scan":
-                rel_name = node['Relation Name']
-                alias = node['Alias']
+                rel_name = node["Relation Name"]
+                alias = node["Alias"]
 
                 self.table_name = rel_name
                 self.description = f"Index scan done on {rel_name} with alias {alias}"
@@ -73,18 +75,20 @@ class ReadableNode:
                     self.description += f" using filter {node['Filter']}"
 
             case "Index Only Scan":
-                rel_name = node['Relation Name']
-                alias = node['Alias']
+                rel_name = node["Relation Name"]
+                alias = node["Alias"]
 
                 self.table_name = rel_name
-                self.description = f"Index only scan done on {rel_name} with alias {alias}"
+                self.description = (
+                    f"Index only scan done on {rel_name} with alias {alias}"
+                )
 
                 if "Index Name" in node:
                     self.description += f" on index name {node['Index Name']}"
 
             case "CTE Scan":
-                cte_name = node['CTE Name']
-                alias = node['Alias']
+                cte_name = node["CTE Name"]
+                alias = node["Alias"]
 
                 self.table_name = cte_name
                 self.description = f"CTE scan done on {cte_name} with alias {alias}"
@@ -104,21 +108,27 @@ class ReadableNode:
         match node_type:
             case "Nested Loop":
                 c1, c2 = self.children[:2]
-                self.description = f"Nested loop join done on {c1.table_name} and {c2.table_name}"
+                self.description = (
+                    f"Nested loop join done on {c1.table_name} and {c2.table_name}"
+                )
 
                 if not is_root:
                     self.generate_intermediate_table()
 
             case "Hash Join":
                 c1, c2 = self.children[:2]
-                self.description = f"Hash join done on {c1.table_name} and {c2.table_name}"
+                self.description = (
+                    f"Hash join done on {c1.table_name} and {c2.table_name}"
+                )
 
                 if not is_root:
                     self.generate_intermediate_table()
 
             case "Merge Join":
                 c1, c2 = self.children[:2]
-                self.description = f"Merge join done on {c1.table_name} and {c2.table_name}"
+                self.description = (
+                    f"Merge join done on {c1.table_name} and {c2.table_name}"
+                )
 
                 if "Merge Cond" in node:
                     self.description += f" with merge condition {node['Merge Cond']}"
@@ -177,9 +187,11 @@ class ReadableNode:
 
             # sorting does not create an intermediate table
             case "Sort":
-                key = node['Sort Key']
+                key = node["Sort Key"]
                 self.table_name = self.children[0].table_name
-                self.description = f"Sort done on {self.table_name} using sort key {key}"
+                self.description = (
+                    f"Sort done on {self.table_name} using sort key {key}"
+                )
 
             case _:
                 # edge case for any node types not handled thus far
@@ -190,8 +202,7 @@ class ReadableNode:
                     self.generate_intermediate_table()
 
     def generate_intermediate_table(self):
-        """Creates an intermediate table name for the current node
-        """
+        """Creates an intermediate table name for the current node"""
 
         global intermediate_count
         self.table_name = f"Tmp{intermediate_count}"
@@ -243,12 +254,13 @@ def generate_numbered_list(l: list[str]) -> str:
     """
 
     return reduce(
-        lambda acc, step: acc + f"{step[0]}. {step[1]}\n",
-        enumerate(l, start=1), ""
+        lambda acc, step: acc + f"{step[0]}. {step[1]}\n", enumerate(l, start=1), ""
     )
 
 
-def get_qep_difference(n1: ReadableNode, n2: ReadableNode, diff_count: int = 0) -> list[str]:
+def get_qep_difference(
+    n1: ReadableNode, n2: ReadableNode, diff_count: int = 0
+) -> list[str]:
     """Generates a list of differences between n1 (old) and n2 (new)
 
     Args:
@@ -265,8 +277,7 @@ def get_qep_difference(n1: ReadableNode, n2: ReadableNode, diff_count: int = 0) 
     # if both nodes are exactly the same, go to their children
     if n1.name == n2.name and len(n1.children) == len(n2.children):
         for i in range(len(n1.children)):
-            diff = get_qep_difference(
-                n1.children[i], n2.children[i], diff_count)
+            diff = get_qep_difference(n1.children[i], n2.children[i], diff_count)
             differences.extend(diff)
 
     else:
@@ -287,8 +298,7 @@ def get_qep_difference(n1: ReadableNode, n2: ReadableNode, diff_count: int = 0) 
 
         if len(n1.children) == len(n2.children):
             for i in range(len(n1.children)):
-                diff = get_qep_difference(
-                    n1.children[i], n2.children[i], diff_count)
+                diff = get_qep_difference(n1.children[i], n2.children[i], diff_count)
                 differences.extend(diff)
 
     return differences

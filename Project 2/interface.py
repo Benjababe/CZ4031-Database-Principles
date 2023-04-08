@@ -1,259 +1,295 @@
-# The RDBMS query optimizer will execute a query execution plan (QEP) to process each
-# such SQL query during exploration. For instance, there will be two QEPs, P and P’, associated with Q and Q’,
-
-# • Design and implement an algorithm that takes as input the followings:
-# a. Old query Q1, its QEP P1
-# b. New query Q2, its QEP P2
-
-# It generates a user-friendly description of what has changed from P1 to P2, and why.
-# Your goal is to ensure generality of the solution (i.e., it can handle a wide variety of query plans on different database instances)
-# and the user-friendly explanation should be concise without sacrificing important information related to the plan.
-
-
-# Setup Guide:
-# Step 1. pip install pysimplegui
-# Step 2: Run this file
-
 import PySimpleGUI as sg
-import schemdraw
-from schemdraw.flow import *
-import cairosvg
-
-import psycopg2
-import psycopg2.extras
-from dotenv import load_dotenv
 import os
+import networkx as nx
+from networkx.drawing.nx_pydot import graphviz_layout
+import matplotlib.pyplot as plt
 
-from annotator import build_readable_tree, get_qep_difference, generate_numbered_list
-
-load_dotenv()
-
-connection = psycopg2.connect(
-    dbname=os.environ.get("DB_NAME"),
-    user=os.environ.get("DB_USER"),
-    password=os.environ.get("DB_PASSWORD"),
-    host=os.environ.get("DB_HOST"),
-    port=os.environ.get("DB_PORT"),
-)
+from explain import build_readable_tree, get_qep_difference, generate_numbered_list
 
 
-def get_query_execution_plan(connection, query: str):
-    with connection.cursor() as cursor:
-        cursor.execute(f"EXPLAIN (FORMAT JSON) {query}")
-        result = cursor.fetchone()
-        return result[0][0]["Plan"]
+class Interface:
+    def __init__(self, connection):
+        self.connection = connection
 
+        self.tables = [
+            "customer",
+            "lineitem",
+            "nation",
+            "orders",
+            "part",
+            "partsupp",
+            "region",
+            "supplier",
+        ]
 
-sg.theme("SandyBeach")
-font = "Helvetica 14 bold"
+        self.window2Active = False
+        self.window3Active = False
+        self.n1 = None
+        self.n2 = None
+        self.notice = True
 
-# Define the layout of the interface
-leftColumn = [
-    [
-        sg.Text("Query 1:", font=font),
-        sg.Multiline(size=(50, 15), key="query1"),
-    ],
-    [
-        sg.Text("Query 2:", font=font),
-        sg.Multiline(size=(50, 15), key="query2"),
-    ],
-    [
-        sg.Button("Compare", size=(20, 2), font=font),
-        sg.Button("Exit", size=(20, 2), font=font),
-    ],
-]
+        self.createUIlayout()
 
-centerColumn = [
-    [
-        sg.Text("QEP P1:", font=font),
-        sg.Multiline(size=(50, 15), disabled=True, key="qepP1"),
-    ],
-    [
-        sg.Text("QEP P2:", font=font),
-        sg.Multiline(size=(50, 15), disabled=True, key="qepP2"),
-    ],
-]
+    def createUIlayout(self):
+        sg.theme("SandyBeach")
+        font = "Helvetica 14 bold"
+        multilinSize = (50, 15)
+        buttonSize = (20, 2)
 
-rightColumn = [
-    [
-        sg.Text("Difference:", font=font),
-        sg.Multiline(size=(50, 15), disabled=True, key="qepDiff"),
-    ],
-    [sg.Button("View as graph", size=(20, 2), font=font, key="graph")],
-]
+        # Define the layout of the interface
+        leftColumn = [
+            [
+                sg.Text("Query 1:", font=font),
+                sg.Multiline(size=multilinSize, key="query1"),
+            ],
+            [
+                sg.Text("Query 2:", font=font),
+                sg.Multiline(size=multilinSize, key="query2"),
+            ],
+            [
+                sg.Button("Compare", size=buttonSize, font=font),
+                sg.Button("Exit", size=buttonSize, font=font),
+            ],
+        ]
 
-layout = [
-    [
-        sg.Column(leftColumn),
-        sg.VerticalSeparator(),
-        sg.Column(centerColumn),
-        sg.VerticalSeparator(),
-        sg.Column(rightColumn),
-    ]
-]
+        centerColumn = [
+            [
+                sg.Text("QEP P1:", font=font),
+                sg.Multiline(size=multilinSize, disabled=True, key="qepP1"),
+            ],
+            [
+                sg.Text("QEP P2:", font=font),
+                sg.Multiline(size=multilinSize, disabled=True, key="qepP2"),
+            ],
+            [sg.Button("View as graph", size=buttonSize, font=font, key="graph")],
+        ]
 
+        rightColumn = [
+            [
+                sg.Text("Difference:", font=font),
+                sg.Multiline(size=multilinSize, disabled=True, key="qepDiff"),
+            ],
+        ]
 
-class tree:
-    def __init__(self, data):
-        self.left = None
-        self.right = None
-        self.data = data
+        layout = [
+            [
+                sg.Column(leftColumn),
+                sg.VerticalSeparator(),
+                sg.Column(centerColumn),
+                sg.VerticalSeparator(),
+                sg.Column(rightColumn),
+            ]
+        ]
 
+        # Create the window
+        self.window = sg.Window("Project 2: QEP", layout, finalize=True)
 
-def convertArr(index, arr):
-    if index >= len(arr) or arr[index] is None:
-        return None
-    node = tree(arr[index])
-    node.left = convertArr(2 * index + 1, arr)
-    node.right = convertArr(2 * index + 2, arr)
-    return node
+    def get_query_execution_plan(self, query: str):
+        with self.connection as conn:  # handles exceptions
+            with conn.cursor() as cursor:
+                cursor.execute(f"EXPLAIN (FORMAT JSON) {query}")
+                result = cursor.fetchone()
+                return result[0][0]["Plan"]
 
+    def createGraphElements(self, node, parentIndex, edgeList, label, colorMap):
+        """
+        create edgelist, labels and colors for nodes in qep
+        """
+        label[parentIndex] = node.name
+        colorMap.append("#33A8FF")
+        if len(node.children) == 0:
+            if "Scan" in node.name:
+                edgeList.append((parentIndex, parentIndex * 2 + 1))
+                label[parentIndex * 2 + 1] = node.table_name
+                colorMap.append("green")
+            return
+        for index, child in enumerate(node.children):
+            edgeList.append((parentIndex, parentIndex * 2 + index + 1))
+            self.createGraphElements(
+                child, parentIndex * 2 + index + 1, edgeList, label, colorMap
+            )
+        return edgeList, label, colorMap
 
-def leftArrow(node):
-    return Arrow().at(node.SE).theta(-45)  # .length(d.unit / 2)
+    def convertToGraph(self, edgeList, name, labels, colorMap):
+        """
+        create graph of qep
+        """
+        G = nx.Graph()
+        G.add_edges_from(edgeList)
+        pos = graphviz_layout(G, prog="dot")
+        plt.figure(
+            figsize=(8, 8) if len(edgeList) < 12 else (len(edgeList), len(edgeList))
+        )
+        nx.draw(
+            G,
+            pos=pos,
+            labels=labels,
+            node_color=colorMap,
+            with_labels=True,
+            font_size=10,
+            node_size=4000,
+        )
+        plt.savefig(f"{name}.png")
 
+    def clean(self):
+        directory = os.getcwd()
+        if os.path.exists(directory + "\\n1.png"):
+            os.remove("n1.png")
+            os.remove("n2.png")
 
-def rightArrow(node):
-    return Arrow().at(node.SW).theta(-135)
+    # Event loop to process events and get inputs
+    def start(self):
+        self.window["query1"].update(
+            """ select *
+        from (SELECT supplier.s_nationkey,supplier.s_suppkey FROM supplier WHERE 200<s_suppkey) AS a
+        join (SELECT nation.n_nationkey, nation.n_regionkey FROM nation) As b
+        on a.s_nationkey = b.n_nationkey """
+        )
+        self.window["query2"].update(
+            """select *
+        from (SELECT supplier.s_nationkey,supplier.s_suppkey FROM supplier  WHERE 200>s_suppkey ORDER BY supplier.s_nationkey) AS a
+        join (SELECT nation.n_nationkey, nation.n_regionkey FROM nation ORDER BY nation.n_nationkey) As b
+        on a.s_nationkey = b.n_nationkey """
+        )
+        while True:
+            event, values = self.window.read()
 
+            # If the user closes the window or clicks the Exit button
+            if event == sg.WINDOW_CLOSED or event == "Exit":
+                break
 
-nodeList = {}
+            # If the user clicks the Compare button
+            if event == "Compare":
+                # Get the input from the textboxes
+                query1 = values["query1"]
+                query2 = values["query2"]
 
+                # Check if the textboxes are empty or contains whitespaces
+                if not query1.strip() or not query2.strip():
+                    sg.popup_error("Please enter queries in both boxes.", title="Error")
+                else:
+                    try:
+                        # Compare the queries and display the QEPs in the displayboxes
+                        qep1 = self.get_query_execution_plan(query1)
+                        qep2 = self.get_query_execution_plan(query2)
+                        self.n1 = build_readable_tree(qep1)
+                        self.n2 = build_readable_tree(qep2)
+                        diff = get_qep_difference(self.n1, self.n2)
 
-def preOrder(node, d, arrow, numChild, parentIndex, childIndex):
-    global leftDegree, rightDegree
-    if not node:
-        return
+                        self.window["qepP1"].update(self.n1)
+                        self.window["qepP2"].update(self.n2)
+                        self.window["qepDiff"].update(generate_numbered_list(diff))
+                    except Exception as e:
+                        sg.popup_error(
+                            f"Error: {e}", title="Error", font="Helvetica 14 bold"
+                        )
 
-    updatedParentIndex = parentIndex
+            # If the user clicks the view graph button
+            if event == "graph":
+                if (
+                    self.n1
+                    and self.n2
+                    and "Unhandled node type" not in self.n1.description
+                    and "Unhandled node type" not in self.n2.description
+                ):
+                    # show popup to inform users
+                    if self.notice:
+                        sg.popup_ok(
+                            "Images must be closed before submitting new query",
+                            title="Notice",
+                            font="Helvetica 14 bold",
+                        )
+                        self.notice = False
 
-    if parentIndex == 0 and childIndex == 0:
-        nodeList[0] = Start().label(node.data)
-        d += nodeList[0]
+                    # create new window for graph of QEP1
+                    if not self.window2Active:
+                        self.window2Active = True
+                        layout2 = [
+                            [
+                                sg.Column(
+                                    [
+                                        [
+                                            sg.Image(
+                                                background_color="white",
+                                                key="qepGraph1",
+                                            )
+                                        ]
+                                    ],
+                                    size=(800, 800),
+                                    scrollable=True,
+                                    key="qepGraph1Column",
+                                )
+                            ]
+                        ]
+                        window2 = sg.Window(
+                            "QEP1 Graph View",
+                            layout2,
+                            grab_anywhere=True,
+                            finalize=True,
+                        )
+                        n1EdgeList = []
+                        n1Labels = {}
+                        n1ColorMap = []
+                        self.createGraphElements(
+                            self.n1, 0, n1EdgeList, n1Labels, n1ColorMap
+                        )
+                        self.convertToGraph(n1EdgeList, "n1", n1Labels, n1ColorMap)
+                        window2.move(200, 250)
+                        window2["qepGraph1"].update(filename="n1.png")
+                        window2.refresh()
+                        window2["qepGraph1Column"].contents_changed()
 
-    if arrow == "left":
-        if numChild == 2:
-            # if nodeList[childIndex+1] == None or len(arr)
-            d += Arrow().at(nodeList[parentIndex].SW).theta(leftDegree)
-            leftDegree += 10
-        else:
-            d += Arrow().down()
-        nodeList[childIndex] = Start(w=4).label(node.data)  # .fill("red")
-        d += nodeList[childIndex]
-        updatedParentIndex = childIndex
+                    # create new window for graph of QEP2
+                    if not self.window3Active:
+                        self.window3Active = True
+                        layout3 = [
+                            [
+                                sg.Column(
+                                    [
+                                        [
+                                            sg.Image(
+                                                background_color="white",
+                                                key="qepGraph2",
+                                            )
+                                        ]
+                                    ],
+                                    size=(800, 800),
+                                    scrollable=True,
+                                    key="qepGraph2Column",
+                                )
+                            ]
+                        ]
+                        window3 = sg.Window(
+                            "QEP2 Graph View",
+                            layout3,
+                            grab_anywhere=True,
+                            finalize=True,
+                        )
+                        n2EdgeList = []
+                        n2Labels = {}
+                        n2ColorMap = []
+                        self.createGraphElements(
+                            self.n2, 0, n2EdgeList, n2Labels, n2ColorMap
+                        )
+                        self.convertToGraph(n2EdgeList, "n2", n2Labels, n2ColorMap)
+                        window3.move(1250, 250)
+                        window3["qepGraph2"].update(filename="n2.png")
+                        window3.refresh()
+                        window3["qepGraph2Column"].contents_changed()
 
-    if arrow == "right":
-        d += Arrow().at(nodeList[parentIndex].SE).theta(rightDegree)
-        rightDegree -= 10
-        nodeList[childIndex] = Start().label(node.data)
-        d += nodeList[childIndex]
-        updatedParentIndex = childIndex
+            # check when user closes the graph of QEP1
+            if self.window2Active:
+                event2, values2 = window2.read()
+                if event2 == sg.WIN_CLOSED:
+                    self.window2Active = False
+                    window2.close()
 
-    numChild = 2 - (node.left, node.right).count(None)
+            # check when user closes the graph of QEP2
+            if self.window3Active:
+                event3, values3 = window3.read()
+                if event3 == sg.WIN_CLOSED:
+                    self.window3Active = False
+                    window3.close()
 
-    preOrder(
-        node.left, d, "left", numChild, updatedParentIndex, updatedParentIndex * 2 + 1
-    )
-    preOrder(
-        node.right, d, "right", numChild, updatedParentIndex, updatedParentIndex * 2 + 2
-    )
-
-
-def preOrderArrow(node, d, parentIndex, childIndex):
-    if not node:
-        return
-    if parentIndex == 0 and childIndex == 0:
-        updatedParentIndex = parentIndex
-    else:
-        if childIndex % 2 != 0:
-            d += Arrow().at(nodeList[parentIndex].SW).to(nodeList[childIndex].NE)
-        else:
-            d += Arrow().at(nodeList[parentIndex].SE).to(nodeList[childIndex].NW)
-        updatedParentIndex = childIndex
-
-    preOrder(node.left, d, updatedParentIndex, updatedParentIndex * 2 + 1)
-    preOrder(node.right, d, updatedParentIndex, updatedParentIndex * 2 + 2)
-
-
-inputList = [
-    "Sort",
-    "Aggregate",
-    "Seq Scan",
-    "Filter",
-    "Sort",
-    "project",
-    None,
-    "Aggregate",
-    None,
-    "Filter",
-    "Sort",
-    "Sort Merge Join",
-]
-input = convertArr(0, inputList)
-
-# Create the window
-window = sg.Window("Project 2: QEP", layout)
-window2Active = False
-
-# Event loop to process events and get inputs
-def startGUI():
-    while True:
-        event, values = window.read()
-
-        # If the user closes the window or clicks the Exit button
-        if event == sg.WINDOW_CLOSED or event == "Exit":
-            break
-
-        # If the user clicks the Compare button
-        if event == "Compare":
-            # Get the input from the textboxes
-            query1 = values["query1"]
-            query2 = values["query2"]
-
-            # Check if the textboxes are empty or contains whitespaces
-            if not query1.strip() or not query2.strip():
-                sg.popup_error("Please enter queries in both boxes.", title="Error")
-            else:
-                try:
-                    # Compare the queries and display the QEPs in the displayboxes
-                    qep1 = get_query_execution_plan(connection, query1)
-                    qep2 = get_query_execution_plan(connection, query2)
-                    n1 = build_readable_tree(qep1)
-                    n2 = build_readable_tree(qep2)
-                    diff = get_qep_difference(n1, n2)
-
-                    window["qepP1"].update(n1)
-                    window["qepP2"].update(n2)
-                    window["qepDiff"].update(generate_numbered_list(diff))
-                except Exception as e:
-                    sg.popup_error(f"Error: {e}", title="Error")
-
-        # if event == "graph" and not window2Active:
-        #     window2Active = True
-        #     with schemdraw.Drawing(show=False) as d:
-        #         leftDegree = -170
-        #         rightDegree = -10
-        #         preOrder(input, d, None, 0, 0, 0)
-        #         d.save(fname="graph1.svg")
-        #         cairosvg.svg2png(url="graph1.svg", write_to="graph1.png")
-        #     #     graph_image = PIL.Image.open("graph1.png")
-        #     #     if graph_image.size != (1000, 1000):
-        #     #         graph_image = graph_image.resize((1000, 1000), PIL.Image.ANTIALIAS)
-
-        #     # layout2 = [
-        #     #     [
-        #     #         sg.Image(
-        #     #             background_color="white", size=(1000, 1000), filename="graph1.png"
-        #     #         )
-        #     #     ]
-        #     # ]
-        #     layout2 = [[sg.Image(background_color="white", filename="graph1.png")]]
-        #     window2 = sg.Window("QEP1 Graph View", layout2, grab_anywhere=True)
-
-        # if window2Active:
-        #     event, values = window2.read(timeout=100)
-        #     if event == sg.WIN_CLOSED:
-        #         window2Active = False
-        #         window2.close()
-    # Close the window
-    window.close()
+        # Close the window
+        self.window.close()
