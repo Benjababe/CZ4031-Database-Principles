@@ -14,9 +14,16 @@ DB_PORT=5432
 
 Python 3.11 was used during development and is recommended. 3.10 should be the minimum as structural pattern matching is used.
 
-### Installation required 
+## Installation required 
+
+```
 pip install psycopg2
 pip install python-dotenv
 pip install pysimplegui 
 pip install networkx[default] 
 pip install pydot 
+```
+
+### External Dependencies
+
+[Graphviz](https://www.graphviz.org/download/) is used to display the QEP. Ensure the directory containing `dot` executable is in the PATH variable.

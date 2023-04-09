@@ -1,22 +1,43 @@
 from __future__ import annotations
 from functools import reduce
+from random import randint
 
 
 intermediate_count = 0
 
+MISC_TYPES = ["Aggregate", "Gather", "Gather Merge",
+              "Hash", "Materialize", "Memoize", "Sort"]
+
+# use to prevent duplicate differences
+diff_cache = {}
+
 
 class ReadableNode:
+    id: int
     type: str
     name: str
     description: str
     children: list[ReadableNode]
     table_name: str
+    real_node: dict
 
     # returns numbered sequence of steps
     def __str__(self):
         return generate_numbered_list(self.get_query_steps())
 
+    # used for caching
+    def __hash__(self) -> int:
+        return self.id
+
+    # used for caching
+    def __eq__(self, __value: ReadableNode) -> bool:
+        if isinstance(__value, ReadableNode):
+            return self.id == __value.id
+        return False
+
     def __init__(self, node: dict, is_root=False):
+        self.id = randint(0, 1000000000)
+
         node_type = node["Node Type"]
 
         self.children = []
@@ -39,6 +60,8 @@ class ReadableNode:
 
         else:
             self.misc_handler(node, node_type, is_root)
+
+        self.real_node = node
 
     def scan_handler(self, node: dict, node_type: str):
         """Handles scan operations
@@ -254,7 +277,8 @@ def generate_numbered_list(l: list[str]) -> str:
     """
 
     return reduce(
-        lambda acc, step: acc + f"{step[0]}. {step[1]}\n", enumerate(l, start=1), ""
+        lambda acc, step: acc +
+        f"{step[0]}. {step[1]}\n", enumerate(l, start=1), ""
     )
 
 
@@ -277,28 +301,62 @@ def get_qep_difference(
     # if both nodes are exactly the same, go to their children
     if n1.name == n2.name and len(n1.children) == len(n2.children):
         for i in range(len(n1.children)):
-            diff = get_qep_difference(n1.children[i], n2.children[i], diff_count)
+            diff = get_qep_difference(
+                n1.children[i], n2.children[i], diff_count)
             differences.extend(diff)
 
     else:
-        # trivial operation for node 1, skipping it
-        if n1.name == "Hash" or n1.name == "Sort" or "Gather" in n1.name:
+        # uncomparable operation for node 1, skipping it
+        if n1.name in MISC_TYPES:
             diff = get_qep_difference(n1.children[0], n2, diff_count)
             differences.extend(diff)
 
-        # trivial operation for node 2, skipping it
-        elif n2.name == "Hash" or n2.name == "Sort" or "Gather" in n2.name:
+        # uncomparable operation for node 2, skipping it
+        elif n2.name in MISC_TYPES:
             diff = get_qep_difference(n1, n2.children[0], diff_count)
             differences.extend(diff)
 
         else:
-            diff_count += 1
-            diff = f"{n1.description} has been changed to {n2.description}"
-            differences.append(diff)
+            if (n1, n2) in diff_cache:
+                diff = diff_cache[(n1, n2)]
+
+            else:
+                diff_count += 1
+                diff = f"{n1.description} has been changed to {n2.description}"
+                diff += f", {get_diff_reason(n1, n2)}"
+
+                diff_cache[(n1, n2)] = diff
+                differences.append(diff)
 
         if len(n1.children) == len(n2.children):
             for i in range(len(n1.children)):
-                diff = get_qep_difference(n1.children[i], n2.children[i], diff_count)
+                diff = get_qep_difference(
+                    n1.children[i], n2.children[i], diff_count)
                 differences.extend(diff)
 
     return differences
+
+
+def get_diff_reason(n1: ReadableNode, n2: ReadableNode) -> str:
+    reason = ""
+
+    if n1.type == "Join" and n2.type == "Join":
+        pass
+
+    if n1.name == "Seq Scan" and n2.name == "Index Scan":
+        if not 'Index Name' in n1.real_node:
+            reason += f"P2 uses an index {n2.real_node['Index Name']} "
+
+    # if number of children are different, assume core structure of query is different
+    if len(n1.children) != len(n2.children):
+        reason += f"possibly due to P1 having a different data output from P2 "
+
+    if n1.real_node['Plan Rows'] > n2.real_node['Plan Rows']:
+        reason += f"reducing rows used from {n1.real_node['Plan Rows']} to {n2.real_node['Plan Rows']} "
+    elif n1.real_node['Plan Rows'] < n2.real_node['Plan Rows']:
+        reason += f"increasing rows used from {n1.real_node['Plan Rows']} to {n2.real_node['Plan Rows']} "
+
+    if n1.real_node['Total Cost'] > n2.real_node['Total Cost']:
+        reason += f"reducing total cost from {n1.real_node['Total Cost']} to {n2.real_node['Total Cost']} "
+
+    return reason

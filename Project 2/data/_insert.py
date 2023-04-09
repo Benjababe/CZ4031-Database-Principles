@@ -245,7 +245,9 @@ def create_tables():
 
     create_indexes = '''
         CREATE INDEX idx_orders_cover ON orders (o_orderkey, o_custkey, o_orderdate);
+        CREATE INDEX idx_orders_totalprice ON orders(o_totalprice);
         CREATE INDEX idx_lineitem_cover ON lineitem (l_orderkey, l_extendedprice, l_discount);
+        CREATE INDEX idx_lineitem_extendedprice ON lineitem(l_extendedprice);
         CREATE INDEX idx_customer_cover ON customer (c_custkey, c_nationkey);
         CREATE INDEX idx_nation_cover ON nation (n_nationkey, n_name);
     '''
