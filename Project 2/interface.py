@@ -87,14 +87,16 @@ class Interface:
         ]
 
         # Create the window
-        self.window = sg.Window("Project 2: QEP", layout, finalize=True, resizable=False) # resizable=False don't seem to work
-        
+        # resizable=False don't seem to work
+        self.window = sg.Window("Project 2: QEP", layout,
+                                finalize=True, resizable=False)
+
         print("main win size", self.window.get_screen_size())
-        
+
         # Set a min size to prevent shrinking too much
-        self.window.TKroot.minsize(1800,960)
-        
-        #self.window.TKroot.state('zoomed') # Set to full screen
+        self.window.TKroot.minsize(1800, 960)
+
+        # self.window.TKroot.state('zoomed') # Set to full screen
 
     def get_query_execution_plan(self, query: str):
         with self.connection as conn:  # handles exceptions

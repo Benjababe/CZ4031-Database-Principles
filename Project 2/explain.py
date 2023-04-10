@@ -381,7 +381,7 @@ def get_diff_reason(n1: ReadableNode, n2: ReadableNode) -> str:
             reason += "swtiching to nested loop for P2 has a lower estimated rows processed, possibly because one relation has very few rows to join "
 
         elif n2.name == "Hash Join":
-            if '=' in n2.real_node['Merge Cond']:
+            if '=' in n2.real_node['Hash Cond']:
                 reason += f"due to the join condition based on equality of {n2.real_node['Hash Cond']}, "
             reason += "both tables being very large and the data is unevenly distributed "
 
@@ -390,9 +390,15 @@ def get_diff_reason(n1: ReadableNode, n2: ReadableNode) -> str:
                 reason += f"due to the merge condition based on equality of {n2.real_node['Merge Cond']}, "
             reason += "the joined columns are sorted or memory is a limiting factor"
 
-    if n1.name == "Seq Scan" and n2.name == "Index Scan":
-        if not 'Index Name' in n1.real_node:
-            reason += f"P2 uses an index {n2.real_node['Index Name']} "
+    if n1.type == "Scan" and n2.type == "Scan":
+        if n1.name == "Seq Scan" and n2.name == "Index Scan":
+            if not 'Index Name' in n1.real_node:
+                reason += f"P2 uses an index {n2.real_node['Index Name']} "
+            else:
+                reason += "P2 has a more selective filter which results in a smaller result set "
+
+        if n1.name == "Index Scan" and n2.name == "Seq Scan":
+            reason += "a large number of rows is required for P2 compared to P1 "
 
     # if number of children are different, assume core structure of query is different
     if len(n1.children) != len(n2.children):
