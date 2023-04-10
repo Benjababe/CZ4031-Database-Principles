@@ -61,7 +61,8 @@ class Interface:
                 sg.Text("QEP P2:", font=font),
                 sg.Multiline(size=multilinSize, disabled=True, key="qepP2"),
             ],
-            [sg.Button("View as graph", size=buttonSize, font=font, key="graph")],
+            [sg.Button("View as graph", size=buttonSize,
+                       font=font, key="graph")],
         ]
 
         rightColumn = [
@@ -69,6 +70,10 @@ class Interface:
                 sg.Text("Difference:", font=font),
                 sg.Multiline(size=multilinSize, disabled=True, key="qepDiff"),
             ],
+            [
+                sg.Checkbox(
+                    "Include trivial operations (Experimental)", key="chkTrivial"),
+            ]
         ]
 
         layout = [
@@ -118,7 +123,8 @@ class Interface:
         G.add_edges_from(edgeList)
         pos = graphviz_layout(G, prog="dot")
         plt.figure(
-            figsize=(8, 8) if len(edgeList) < 12 else (len(edgeList), len(edgeList))
+            figsize=(8, 8) if len(edgeList) < 12 else (
+                len(edgeList), len(edgeList))
         )
         nx.draw(
             G,
@@ -140,16 +146,40 @@ class Interface:
     # Event loop to process events and get inputs
     def start(self):
         self.window["query1"].update(
-            """ select *
-        from (SELECT supplier.s_nationkey,supplier.s_suppkey FROM supplier WHERE 200<s_suppkey) AS a
-        join (SELECT nation.n_nationkey, nation.n_regionkey FROM nation) As b
-        on a.s_nationkey = b.n_nationkey """
+            """ select
+                o_orderpriority,
+                count(*) as order_count
+                from
+                orders
+                where
+                o_totalprice > 100
+                group by
+                o_orderpriority;
+      """
         )
         self.window["query2"].update(
-            """select *
-        from (SELECT supplier.s_nationkey,supplier.s_suppkey FROM supplier  WHERE 200>s_suppkey ORDER BY supplier.s_nationkey) AS a
-        join (SELECT nation.n_nationkey, nation.n_regionkey FROM nation ORDER BY nation.n_nationkey) As b
-        on a.s_nationkey = b.n_nationkey """
+            """
+            select
+            o_orderpriority,
+            count(*) as order_count
+            from
+            orders
+            where
+            o_totalprice > 100
+            and exists (
+                select
+                *
+                from
+                lineitem
+                where
+                l_orderkey = o_orderkey
+                and l_extendedprice > 100
+            )
+            group by
+            o_orderpriority
+            order by
+            o_orderpriority;
+        """
         )
         while True:
             event, values = self.window.read()
@@ -166,19 +196,25 @@ class Interface:
 
                 # Check if the textboxes are empty or contains whitespaces
                 if not query1.strip() or not query2.strip():
-                    sg.popup_error("Please enter queries in both boxes.", title="Error")
+                    sg.popup_error(
+                        "Please enter queries in both boxes.", title="Error")
                 else:
                     try:
+                        # Flag whether to show trivial operations in difference output
+                        use_note = values["chkTrivial"]
+
                         # Compare the queries and display the QEPs in the displayboxes
                         qep1 = self.get_query_execution_plan(query1)
                         qep2 = self.get_query_execution_plan(query2)
                         self.n1 = build_readable_tree(qep1)
                         self.n2 = build_readable_tree(qep2)
-                        diff = get_qep_difference(self.n1, self.n2)
+                        diff = get_qep_difference(
+                            self.n1, self.n2, use_note=use_note)
 
                         self.window["qepP1"].update(self.n1)
                         self.window["qepP2"].update(self.n2)
-                        self.window["qepDiff"].update(generate_numbered_list(diff))
+                        self.window["qepDiff"].update(
+                            generate_numbered_list(diff))
                     except Exception as e:
                         sg.popup_error(
                             f"Error: {e}", title="Error", font="Helvetica 14 bold"
@@ -233,7 +269,8 @@ class Interface:
                         self.createGraphElements(
                             self.n1, 0, n1EdgeList, n1Labels, n1ColorMap
                         )
-                        self.convertToGraph(n1EdgeList, "n1", n1Labels, n1ColorMap)
+                        self.convertToGraph(
+                            n1EdgeList, "n1", n1Labels, n1ColorMap)
                         window2.move(200, 250)
                         window2["qepGraph1"].update(filename="n1.png")
                         window2.refresh()
@@ -271,7 +308,8 @@ class Interface:
                         self.createGraphElements(
                             self.n2, 0, n2EdgeList, n2Labels, n2ColorMap
                         )
-                        self.convertToGraph(n2EdgeList, "n2", n2Labels, n2ColorMap)
+                        self.convertToGraph(
+                            n2EdgeList, "n2", n2Labels, n2ColorMap)
                         window3.move(1250, 250)
                         window3["qepGraph2"].update(filename="n2.png")
                         window3.refresh()

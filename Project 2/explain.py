@@ -283,7 +283,8 @@ def generate_numbered_list(l: list[str]) -> str:
 
 
 def get_qep_difference(
-    n1: ReadableNode, n2: ReadableNode, diff_count: int = 0
+    n1: ReadableNode, n2: ReadableNode,
+    diff_count: int = 0, use_note: bool = False
 ) -> list[str]:
     """Generates a list of differences between n1 (old) and n2 (new)
 
@@ -291,6 +292,7 @@ def get_qep_difference(
         n1 (ReadableNode): Node in the old QEP
         n2 (ReadableNode): Node in the new QEP
         diff_count (int, optional): Number of current differences. Defaults to 0.
+        use_note (bool, optional): Flag whether to include trivial operations. Defaults to False
 
     Returns:
         list[str]: List of differences
@@ -308,11 +310,23 @@ def get_qep_difference(
     else:
         # uncomparable operation for node 1, skipping it
         if n1.name in MISC_TYPES:
+            # add note if available
+            if use_note:
+                note = get_uncomparable_note(n1, n2)
+                if note is not None:
+                    differences.append(note)
+
             diff = get_qep_difference(n1.children[0], n2, diff_count)
             differences.extend(diff)
 
         # uncomparable operation for node 2, skipping it
         elif n2.name in MISC_TYPES:
+            # add note if available
+            if use_note:
+                note = get_uncomparable_note(n1, n2)
+                if note is not None:
+                    differences.append(note)
+
             diff = get_qep_difference(n1, n2.children[0], diff_count)
             differences.extend(diff)
 
@@ -335,6 +349,28 @@ def get_qep_difference(
                 differences.extend(diff)
 
     return differences
+
+
+def get_uncomparable_note(n1: ReadableNode, n2: ReadableNode) -> str | None:
+    note = None
+
+    if (n1, n2) in diff_cache:
+        return note
+
+    if n1.name == "Sort" and n2.name != "Sort":
+        note = f"[NOTE] P1 has a sort on {n1.real_node['Sort Key']} which P2 does not"
+
+    if n1.name != "Sort" and n2.name == "Sort":
+        note = f"[NOTE] P2 has a sort on {n2.real_node['Sort Key']} which P1 does not"
+
+    if n1.name == "Gather Merge" and n2.name != "Gather Merge":
+        note = f"[NOTE] P1 has a gather merge which utilises parallelisation which P2 does not"
+
+    if n1.name != "Gather Merge" and n2.name == "Gather Merge":
+        note = f"[NOTE] P2 has a gather merge which utilises parallelisation which P1 does not"
+
+    diff_cache[(n1, n2)] = note
+    return note
 
 
 def get_diff_reason(n1: ReadableNode, n2: ReadableNode) -> str:
