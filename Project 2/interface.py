@@ -87,7 +87,14 @@ class Interface:
         ]
 
         # Create the window
-        self.window = sg.Window("Project 2: QEP", layout, finalize=True)
+        self.window = sg.Window("Project 2: QEP", layout, finalize=True, resizable=False) # resizable=False don't seem to work
+        
+        print("main win size", self.window.get_screen_size())
+        
+        # Set a min size to prevent shrinking too much
+        self.window.TKroot.minsize(1800,960)
+        
+        #self.window.TKroot.state('zoomed') # Set to full screen
 
     def get_query_execution_plan(self, query: str):
         with self.connection as conn:  # handles exceptions
@@ -263,6 +270,9 @@ class Interface:
                             grab_anywhere=True,
                             finalize=True,
                         )
+
+                        print("win 2 size", window2.get_screen_size())
+
                         n1EdgeList = []
                         n1Labels = {}
                         n1ColorMap = []
@@ -302,6 +312,9 @@ class Interface:
                             grab_anywhere=True,
                             finalize=True,
                         )
+
+                        print("win 3 size", window3.get_screen_size())
+
                         n2EdgeList = []
                         n2Labels = {}
                         n2ColorMap = []
@@ -317,14 +330,14 @@ class Interface:
 
             # check when user closes the graph of QEP1
             if self.window2Active:
-                event2, values2 = window2.read()
+                event2 = window2.read()
                 if event2 == sg.WIN_CLOSED:
                     self.window2Active = False
                     window2.close()
 
             # check when user closes the graph of QEP2
             if self.window3Active:
-                event3, values3 = window3.read()
+                event3 = window3.read()
                 if event3 == sg.WIN_CLOSED:
                     self.window3Active = False
                     window3.close()
