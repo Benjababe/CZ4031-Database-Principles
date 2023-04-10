@@ -377,7 +377,18 @@ def get_diff_reason(n1: ReadableNode, n2: ReadableNode) -> str:
     reason = ""
 
     if n1.type == "Join" and n2.type == "Join":
-        pass
+        if n2.name == "Nested Loop":
+            reason += "swtiching to nested loop for P2 has a lower estimated rows processed, possibly because one relation has very few rows to join "
+
+        elif n2.name == "Hash Join":
+            if '=' in n2.real_node['Merge Cond']:
+                reason += f"due to the join condition based on equality of {n2.real_node['Hash Cond']}, "
+            reason += "both tables being very large and the data is unevenly distributed "
+
+        elif n2.name == "Merge Join":
+            if '=' in n2.real_node['Merge Cond']:
+                reason += f"due to the merge condition based on equality of {n2.real_node['Merge Cond']}, "
+            reason += "the joined columns are sorted or memory is a limiting factor"
 
     if n1.name == "Seq Scan" and n2.name == "Index Scan":
         if not 'Index Name' in n1.real_node:
@@ -388,9 +399,9 @@ def get_diff_reason(n1: ReadableNode, n2: ReadableNode) -> str:
         reason += f"possibly due to P1 having a different data output from P2 "
 
     if n1.real_node['Plan Rows'] > n2.real_node['Plan Rows']:
-        reason += f"reducing rows used from {n1.real_node['Plan Rows']} to {n2.real_node['Plan Rows']} "
+        reason += f"reducing rows processed from {n1.real_node['Plan Rows']} to {n2.real_node['Plan Rows']} "
     elif n1.real_node['Plan Rows'] < n2.real_node['Plan Rows']:
-        reason += f"increasing rows used from {n1.real_node['Plan Rows']} to {n2.real_node['Plan Rows']} "
+        reason += f"increasing rows processed from {n1.real_node['Plan Rows']} to {n2.real_node['Plan Rows']} "
 
     if n1.real_node['Total Cost'] > n2.real_node['Total Cost']:
         reason += f"reducing total cost from {n1.real_node['Total Cost']} to {n2.real_node['Total Cost']} "
