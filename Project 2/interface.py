@@ -62,7 +62,9 @@ class Interface:
                 sg.Text("QEP P2:", font=font),
                 sg.Multiline(size=multilineSize, disabled=True, key="qepP2"),
             ],
-            [sg.Button("View as graph", size=buttonSize, font=font, key="graph")],
+            [
+                sg.Button("View as graph", size=buttonSize,font=font, key="graph")
+            ],
         ]
 
         rightColumn = [
@@ -148,38 +150,54 @@ class Interface:
     def start(self):
         self.window["query1"].update(
             """ select
-                o_orderpriority,
-                count(*) as order_count
+                    n_name,
+                    sum(l_extendedprice * (1 - l_discount)) as revenue
                 from
-                orders
+                    customer,
+                    orders,
+                    lineitem,
+                    supplier,
+                    nation,
+                    region
                 where
-                o_totalprice > 100
+                    c_custkey = o_custkey
+                    and l_orderkey = o_orderkey
+                    and l_suppkey = s_suppkey
+                    and c_nationkey = s_nationkey
+                    and s_nationkey = n_nationkey
+                    and n_regionkey = r_regionkey
                 group by
-                o_orderpriority;
+                    n_name
       """
         )
         self.window["query2"].update(
             """
             select
-            o_orderpriority,
-            count(*) as order_count
+                n_name,
+                sum(l_extendedprice * (1 - l_discount)) as revenue
             from
-            orders
+                customer,
+                orders,
+                lineitem,
+                supplier,
+                nation,
+                region
             where
-            o_totalprice > 100
-            and exists (
-                select
-                *
-                from
-                lineitem
-                where
-                l_orderkey = o_orderkey
-                and l_extendedprice > 100
-            )
+                c_custkey = o_custkey
+                and l_orderkey = o_orderkey
+                and l_suppkey = s_suppkey
+                and c_nationkey = s_nationkey
+                and s_nationkey = n_nationkey
+                and n_regionkey = r_regionkey
+                and r_name = 'ASIA'
+                and o_orderdate >= '1994-01-01'
+                and o_orderdate < '1995-01-01'
+                and c_acctbal > 10
+                and s_acctbal > 20
             group by
-            o_orderpriority
+                n_name
             order by
-            o_orderpriority;
+                revenue desc;
         """
         )
         while True:
