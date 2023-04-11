@@ -32,19 +32,20 @@ class Interface:
 
     def createUIlayout(self):
         sg.theme("SandyBeach")
+        sg.set_options(dpi_awareness=True)
         font = "Helvetica 14 bold"
-        multilinSize = (50, 15)
+        multilineSize = (50, 15)
         buttonSize = (20, 2)
 
         # Define the layout of the interface
         leftColumn = [
             [
                 sg.Text("Query 1:", font=font),
-                sg.Multiline(size=multilinSize, key="query1"),
+                sg.Multiline(size=multilineSize, key="query1"),
             ],
             [
                 sg.Text("Query 2:", font=font),
-                sg.Multiline(size=multilinSize, key="query2"),
+                sg.Multiline(size=multilineSize, key="query2"),
             ],
             [
                 sg.Button("Compare", size=buttonSize, font=font),
@@ -55,25 +56,25 @@ class Interface:
         centerColumn = [
             [
                 sg.Text("QEP P1:", font=font),
-                sg.Multiline(size=multilinSize, disabled=True, key="qepP1"),
+                sg.Multiline(size=multilineSize, disabled=True, key="qepP1"),
             ],
             [
                 sg.Text("QEP P2:", font=font),
-                sg.Multiline(size=multilinSize, disabled=True, key="qepP2"),
+                sg.Multiline(size=multilineSize, disabled=True, key="qepP2"),
             ],
-            [sg.Button("View as graph", size=buttonSize,
-                       font=font, key="graph")],
+            [sg.Button("View as graph", size=buttonSize, font=font, key="graph")],
         ]
 
         rightColumn = [
             [
                 sg.Text("Difference:", font=font),
-                sg.Multiline(size=multilinSize, disabled=True, key="qepDiff"),
+                sg.Multiline(size=multilineSize, disabled=True, key="qepDiff"),
             ],
             [
                 sg.Checkbox(
-                    "Include trivial operations (Experimental)", key="chkTrivial"),
-            ]
+                    "Include trivial operations (Experimental)", key="chkTrivial"
+                ),
+            ],
         ]
 
         layout = [
@@ -87,16 +88,7 @@ class Interface:
         ]
 
         # Create the window
-        # resizable=False don't seem to work
-        self.window = sg.Window("Project 2: QEP", layout,
-                                finalize=True, resizable=False)
-
-        print("main win size", self.window.get_screen_size())
-
-        # Set a min size to prevent shrinking too much
-        self.window.TKroot.minsize(1800, 960)
-
-        # self.window.TKroot.state('zoomed') # Set to full screen
+        self.window = sg.Window("Project 2: QEP", layout, finalize=True)
 
     def get_query_execution_plan(self, query: str):
         with self.connection as conn:  # handles exceptions
@@ -132,8 +124,7 @@ class Interface:
         G.add_edges_from(edgeList)
         pos = graphviz_layout(G, prog="dot")
         plt.figure(
-            figsize=(8, 8) if len(edgeList) < 12 else (
-                len(edgeList), len(edgeList))
+            figsize=(8, 8) if len(edgeList) < 11 else (len(edgeList), len(edgeList))
         )
         nx.draw(
             G,
@@ -151,6 +142,7 @@ class Interface:
         if os.path.exists(directory + "\\n1.png"):
             os.remove("n1.png")
             os.remove("n2.png")
+        self.connection.close()
 
     # Event loop to process events and get inputs
     def start(self):
@@ -205,8 +197,7 @@ class Interface:
 
                 # Check if the textboxes are empty or contains whitespaces
                 if not query1.strip() or not query2.strip():
-                    sg.popup_error(
-                        "Please enter queries in both boxes.", title="Error")
+                    sg.popup_error("Please enter queries in both boxes.", title="Error")
                 else:
                     try:
                         # Flag whether to show trivial operations in difference output
@@ -217,13 +208,11 @@ class Interface:
                         qep2 = self.get_query_execution_plan(query2)
                         self.n1 = build_readable_tree(qep1)
                         self.n2 = build_readable_tree(qep2)
-                        diff = get_qep_difference(
-                            self.n1, self.n2, use_note=use_note)
+                        diff = get_qep_difference(self.n1, self.n2, use_note=use_note)
 
                         self.window["qepP1"].update(self.n1)
                         self.window["qepP2"].update(self.n2)
-                        self.window["qepDiff"].update(
-                            generate_numbered_list(diff))
+                        self.window["qepDiff"].update(generate_numbered_list(diff))
                     except Exception as e:
                         sg.popup_error(
                             f"Error: {e}", title="Error", font="Helvetica 14 bold"
@@ -273,16 +262,13 @@ class Interface:
                             finalize=True,
                         )
 
-                        print("win 2 size", window2.get_screen_size())
-
                         n1EdgeList = []
                         n1Labels = {}
                         n1ColorMap = []
                         self.createGraphElements(
                             self.n1, 0, n1EdgeList, n1Labels, n1ColorMap
                         )
-                        self.convertToGraph(
-                            n1EdgeList, "n1", n1Labels, n1ColorMap)
+                        self.convertToGraph(n1EdgeList, "n1", n1Labels, n1ColorMap)
                         window2.move(200, 250)
                         window2["qepGraph1"].update(filename="n1.png")
                         window2.refresh()
@@ -315,16 +301,13 @@ class Interface:
                             finalize=True,
                         )
 
-                        print("win 3 size", window3.get_screen_size())
-
                         n2EdgeList = []
                         n2Labels = {}
                         n2ColorMap = []
                         self.createGraphElements(
                             self.n2, 0, n2EdgeList, n2Labels, n2ColorMap
                         )
-                        self.convertToGraph(
-                            n2EdgeList, "n2", n2Labels, n2ColorMap)
+                        self.convertToGraph(n2EdgeList, "n2", n2Labels, n2ColorMap)
                         window3.move(1250, 250)
                         window3["qepGraph2"].update(filename="n2.png")
                         window3.refresh()
@@ -332,14 +315,14 @@ class Interface:
 
             # check when user closes the graph of QEP1
             if self.window2Active:
-                event2 = window2.read()
+                event2, values2 = window2.read()
                 if event2 == sg.WIN_CLOSED:
                     self.window2Active = False
                     window2.close()
 
             # check when user closes the graph of QEP2
             if self.window3Active:
-                event3 = window3.read()
+                event3, values3 = window3.read()
                 if event3 == sg.WIN_CLOSED:
                     self.window3Active = False
                     window3.close()
