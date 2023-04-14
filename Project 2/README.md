@@ -32,3 +32,9 @@ DB_PASSWORD=xxx
 DB_HOST=localhost
 DB_PORT=5432
 ```
+
+The project is started by simply calling 
+
+```
+python project.py
+```
