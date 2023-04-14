@@ -23,7 +23,7 @@ If installed using the installer, ensure `C:\Program Files\Graphviz\bin` exists 
 
 ## Running project.py
 
-A `.env` file is required for setting up connection with the database. Ensure it has the following values. Ensure DB_NAME is whatever database holds the TPC-H dataset under the `public` schema
+A `.env` file is required for setting up connection with the database with the values below. Ensure `DB_NAME` is the database holds the dataset you wish to query and that the `.env` file is in the same directory as `project.py`.
 
 ```
 DB_NAME=xxx
