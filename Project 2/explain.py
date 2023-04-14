@@ -302,6 +302,12 @@ def get_qep_difference(
 
     # if both nodes are exactly the same, go to their children
     if n1.name == n2.name and len(n1.children) == len(n2.children):
+        # exception for seq scans as one may contain a filter
+        if n1.name == "Seq Scan" and n2.name == "Seq Scan":
+            diff = get_diff_reason(n1, n2)
+            if diff != None:
+                differences.append(diff)
+
         for i in range(len(n1.children)):
             diff = get_qep_difference(
                 n1.children[i], n2.children[i], diff_count)
@@ -391,6 +397,14 @@ def get_diff_reason(n1: ReadableNode, n2: ReadableNode) -> str:
             reason += "the joined columns are sorted or memory is a limiting factor"
 
     if n1.type == "Scan" and n2.type == "Scan":
+        if n1.name == "Seq Scan" and n2.name == "Seq Scan":
+            if 'Filter' in n1.real_node and 'Filter' not in n2.real_node:
+                reason += f"P2 does not have the filter {n1.real_node['Filter']} which P1 has "
+            elif 'Filter' not in n1.real_node and 'Filter' in n2.real_node:
+                reason += f"P2 has the filter {n2.real_node['Filter']} which P1 does not have "
+            else:
+                return None
+
         if n1.name == "Seq Scan" and n2.name == "Index Scan":
             if not 'Index Name' in n1.real_node:
                 reason += f"P2 uses an index {n2.real_node['Index Name']} "
